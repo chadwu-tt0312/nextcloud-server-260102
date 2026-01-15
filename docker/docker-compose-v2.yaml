@@ -1,0 +1,62 @@
+version: "3.5"
+
+services:
+  db:
+    image: mariadb:10.5
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD=password
+      - MARIADB_DATABASE=nextcloud
+      - MARIADB_USER=imlala
+      - MARIADB_PASSWORD=password
+    volumes:
+      - nextcloud_db:/var/lib/mysql
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+
+  app:
+    image: nextcloud:stable-apache
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    environment:
+      - NEXTCLOUD_TRUSTED_DOMAINS=cloud.example.com
+      - OVERWRITEHOST=cloud.example.com
+      - OVERWRITEPROTOCOL=https
+      - PHP_MEMORY_LIMIT=2048M
+      - PHP_UPLOAD_LIMIT=5120M
+      - REDIS_HOST=redis
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=imlala
+      - MYSQL_PASSWORD=password
+      - OBJECTSTORE_S3_HOST=minio.example.com
+      - OBJECTSTORE_S3_BUCKET=nextcloud
+      - OBJECTSTORE_S3_KEY=imlala
+      - OBJECTSTORE_S3_SECRET=password
+      - OBJECTSTORE_S3_PORT=443
+      - OBJECTSTORE_S3_SSL=true
+      - OBJECTSTORE_S3_REGION=hosthatch-uk
+      - OBJECTSTORE_S3_USEPATH_STYLE=false
+    ports:
+      - 127.0.0.1:8080:80
+    volumes:
+      - nextcloud:/var/www/html
+
+  cron:
+    image: nextcloud:stable-apache
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - nextcloud:/var/www/html
+    entrypoint: /cron.sh
+
+volumes:
+  nextcloud:
+  nextcloud_db:

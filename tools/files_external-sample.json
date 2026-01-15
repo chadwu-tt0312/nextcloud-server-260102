@@ -1,0 +1,59 @@
+[
+  {
+    "mount_id": 1,
+    "mount_point": "/minio-user00001",
+    "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+    "authentication_type": "amazons3::accesskey",
+    "configuration": {
+      "bucket": "user00001-filespace",
+      "hostname": "192.168.31.180",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "key": "VOR9QID1QHPSMXABC001",
+      "secret": "wJalrXUtnFEMI/K7MDENG/SECRET001"
+    },
+    "options": {},
+    "applicable_users": [],
+    "applicable_groups": []
+  },
+  {
+    "mount_id": 2,
+    "mount_point": "/minio-user00002",
+    "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+    "authentication_type": "amazons3::accesskey",
+    "configuration": {
+      "bucket": "user00002-filespace",
+      "hostname": "192.168.31.180",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "key": "VOR9QID1QHPSMXABC002",
+      "secret": "wJalrXUtnFEMI/K7MDENG/SECRET002"
+    },
+    "options": {},
+    "applicable_users": [],
+    "applicable_groups": []
+  },
+  {
+    "mount_id": 3,
+    "mount_point": "/minio-user00003",
+    "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+    "authentication_type": "amazons3::accesskey",
+    "configuration": {
+      "bucket": "user00003-filespace",
+      "hostname": "192.168.31.180",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "key": "VOR9QID1QHPSMXABC003",
+      "secret": "wJalrXUtnFEMI/K7MDENG/SECRET003"
+    },
+    "options": {},
+    "applicable_users": [],
+    "applicable_groups": []
+  }
+]

@@ -1,0 +1,77 @@
+version: "3.7"
+
+services:
+  nextcloud-db:
+    image: mariadb:10.6
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    environment:
+      MYSQL_ROOT_PASSWORD: upspi
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: upspi
+    volumes:
+      - nextcloud-db:/var/lib/mysql
+    networks:
+      - n8n-network
+
+  redis:
+    image: redis:7
+    restart: always
+    networks:
+      - n8n-network
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    restart: always
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - n8n-network
+
+  nextcloud:
+    image: nextcloud:32
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - nextcloud-db
+      - redis
+      - minio
+    environment:
+      MYSQL_HOST: nextcloud-db
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: upspi
+
+      REDIS_HOST: redis
+
+      # S3 / MinIO 設定 (Primary Object Storage)
+      OBJECTSTORE_S3_BUCKET: nextcloud
+      OBJECTSTORE_S3_KEY: minioadmin
+      OBJECTSTORE_S3_SECRET: minioadmin
+      OBJECTSTORE_S3_HOST: minio
+      OBJECTSTORE_S3_PORT: 9000
+      OBJECTSTORE_S3_SSL: "false"
+      OBJECTSTORE_S3_USEPATH_STYLE: "true"
+      OBJECTSTORE_S3_REGION: us-east-1
+    volumes:
+      - nextcloud-html:/var/www/html
+    networks:
+      - n8n-network
+
+volumes:
+  nextcloud-db:
+  nextcloud-html:
+  minio-data:
+
+networks:
+  n8n-network:
+    external: true
