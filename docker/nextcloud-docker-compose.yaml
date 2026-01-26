@@ -1,6 +1,6 @@
 version: "3.7"
 services:
-  nextclouddb:
+  nextcloud-db:
     image: mariadb:10.6
     restart: always
     command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
@@ -12,7 +12,7 @@ services:
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
     volumes:
-      - db:/var/lib/mysql
+      - nextclouddb:/var/lib/mysql
     networks:
       - n8n-network
 
@@ -31,16 +31,17 @@ services:
       - 8085:80
     depends_on:
       - redis
-      - nextclouddb
+      - nextcloud-db
     volumes:
       - nextcloud:/var/www/html
       # below mapping is for using External Storage (local) to mount samba shared folder into Nextcloud. Change as needed.
       # - /home/upspi/Desktop/share/nextcloud_share:/mnt/samba
+      - /mnt/d/tmp/for_nextcloud:/var/local
     environment:
       - MYSQL_PASSWORD=upspi
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
-      - MYSQL_HOST=nextclouddb
+      - MYSQL_HOST=nextcloud-db
       - NEXTCLOUD_ADMIN_USER=admin
       - NEXTCLOUD_ADMIN_PASSWORD=password123
     networks:
@@ -48,7 +49,7 @@ services:
 
 volumes:
   nextcloud:
-  db:
+  nextclouddb:
 
 networks:
   n8n-network:

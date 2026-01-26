@@ -176,6 +176,49 @@ abstract class StoragesController extends Controller {
 		}
 
 		if (!$backend->validateStorage($storage)) {
+			// 記錄驗證失敗的詳細資訊
+			$backendOptions = $storage->getBackendOptions();
+			$this->logger->debug('Backend storage validation failed', [
+				'backend' => $backend->getIdentifier(),
+				'mountPoint' => $storage->getMountPoint(),
+				'backendOptions' => $backendOptions,
+			]);
+			
+			// 檢查每個參數以找出失敗的原因
+			foreach ($backend->getParameters() as $name => $parameter) {
+				$value = $storage->getBackendOption($name);
+				$isOptional = $parameter->isOptional();
+				$hasValue = !is_null($value);
+				
+				$this->logger->debug('Parameter check', [
+					'name' => $name,
+					'value' => $hasValue ? (is_string($value) && strlen($value) > 50 ? substr($value, 0, 50) . '...' : $value) : null,
+					'type' => $parameter->getType(),
+					'isOptional' => $isOptional,
+					'hasValue' => $hasValue,
+					'needsValidation' => ($hasValue || !$isOptional),
+				]);
+				
+				if ($hasValue || !$isOptional) {
+					// 創建參數副本進行驗證測試
+					$testValue = $value;
+					$isValid = $parameter->validateValue($testValue);
+					if (!$isValid) {
+						$this->logger->error('Parameter validation failed', [
+							'name' => $name,
+							'value' => $hasValue ? (is_string($value) && strlen($value) > 50 ? substr($value, 0, 50) . '...' : $value) : null,
+							'type' => $parameter->getType(),
+							'isOptional' => $isOptional,
+						]);
+					}
+				} else if (!$isOptional) {
+					$this->logger->error('Required parameter missing', [
+						'name' => $name,
+						'type' => $parameter->getType(),
+					]);
+				}
+			}
+			
 			// unsatisfied parameters
 			return new DataResponse(
 				[

@@ -1,0 +1,85 @@
+### nextcloud
+curl -X GET http://localhost:8085/apps/files_external/globalstorages \
+  -H "Authorization: Basic admin password123" \
+  -H "OCS-APIRequest: true"
+
+###
+@ADMIN_INFO = admin:password123
+@ACCESS_KEY = ZEPNGTC059NIHD4KHYVW
+@SECRET_KEY = xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj
+curl -X GET "http://localhost:8085/apps/files_external/globalstorages" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true"
+
+###
+curl -X GET "http://localhost:8085/apps/files_external/globalstorages/10" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true"
+
+### Create a new S3 external storage  
+curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mountPoint": "/minio-DEPT_SMG_ARC1",
+    "backend": "amazons3",
+    "authMechanism": "amazons3::accesskey",
+    "backendOptions": {
+      "bucket": "dep-smg-arc1-filespace",
+      "hostname": "192.168.31.180",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "legacy_auth": false,
+      "useMultipartCopy": true,
+      "key": "{{ACCESS_KEY}}",
+      "secret": "{{SECRET_KEY}}"
+    },
+    "mountOptions": {},
+    "applicableUsers": [],
+    "applicableGroups": []
+  }'
+
+###
+curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "mountPoint": "Local-API-path011",
+  "backend": "local",
+  "authMechanism": "null",
+  "backendOptions": {
+    "datadir": "/var/local/path001/path011"
+  }
+}'
+
+### Update an existing global storage (ID: 10)
+curl -X PUT "http://localhost:8085/apps/files_external/globalstorages/10" \
+  -u "admin:password123" \
+  -H "OCS-APIRequest: true" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mountPoint": "/minio-DEPT_SMG_ARC1-upd",
+    "backend": "amazons3",
+    "authMechanism": "amazons3::accesskey",
+    "backendOptions": {
+      "bucket": "dep-smg-arc1-filespace",
+      "hostname": "192.168.31.180",
+      "port": "9000",
+      "region": "us-east-123",
+      "use_ssl": false,
+      "use_path_style": true,
+      "legacy_auth": false,
+      "useMultipartCopy": true,
+      "key": "{{ACCESS_KEY}}",
+      "secret": "{{SECRET_KEY}}"
+    }
+  }'
+
+### Delete a global storage (ID: 11)
+curl -X DELETE "http://localhost:8085/apps/files_external/globalstorages/11" \
+  -u "admin:password123" \
+  -H "OCS-APIRequest: true"

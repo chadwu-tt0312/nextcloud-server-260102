@@ -179,5 +179,8 @@ cypress/snapshots
 cypress/videos
 
 /.direnv
-
 .env
+.cursorindexingignore
+.specstory/
+pass/
+apipark/
