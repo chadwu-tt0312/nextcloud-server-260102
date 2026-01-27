@@ -1,0 +1,34 @@
+=== 執行記錄開始: 2026-01-27T11:29:51.925495 ===
+mounts.json 檔案: tools\mounts.json
+Nextcloud URL: http://localhost:8085
+管理員帳號: admin
+記錄檔案: logs\create-mount.log
+============================================================
+
+步驟 1: 取得所有外部儲存空間...
+呼叫 Nextcloud API: http://localhost:8085/apps/files_external/globalstorages
+成功取得 7 個外部儲存空間
+步驟 2: 提取 amazons3 backend 的 bucket 列表...
+找到 6 個現有的 amazons3 bucket: ['dept-smg-arc1-filespace', 'dept-smg-arc5-filespace', '00059094-filespace', '00059012-filespace', 'smg-arc304-filespace', 'smg-arc305-filespace']
+步驟 3: 讀取 mounts.json...
+讀取到 6 筆資料
+============================================================
+步驟 4: 比對並建立外部儲存空間...
+✓ 第 1 筆：/minio-DEPT_SMG_ARC1 (bucket: dept-smg-arc1-filespace) 已存在，跳過
+✓ 第 2 筆：/minio-DEPT_SMG_ARC5 (bucket: dept-smg-arc5-filespace) 已存在，跳過
+✓ 第 3 筆：/minio-00059094 (bucket: 00059094-filespace) 已存在，跳過
+✓ 第 4 筆：/minio-00059012 (bucket: 00059012-filespace) 已存在，跳過
+✓ 第 5 筆：/minio-SMG_ARC304 (bucket: smg-arc304-filespace) 已存在，跳過
+✓ 第 6 筆：/minio-SMG_Arc305 (bucket: smg-arc305-filespace) 已存在，跳過
+
+============================================================
+✅ 處理完成！
+   總筆數: 6
+   已存在: 6 筆
+   新增成功: 0 筆
+   新增失敗: 0 筆
+   耗時: 0.7 秒
+   平均速度: 8.9 筆/秒
+
+=== 執行記錄結束: 2026-01-27T11:29:52.599637 ===
+📝 記錄檔案: logs\create-mount.log

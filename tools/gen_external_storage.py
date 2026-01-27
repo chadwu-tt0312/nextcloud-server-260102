@@ -12,14 +12,10 @@ Nextcloud External Storage Configuration Generator
 版本：1.0.0
 
 用法:
-    python gen_external_storage.py.py --help
-    python gen_external_storage.py.py --csv users.csv --output mounts.json
-    python gen_external_storage.py.py --import-csv import-accounts.csv --output mounts.json
-
-CSV 格式範例 (users.csv):
-    user_id,bucket_name,access_key,secret_key
-    minio-user00001,minio-user00001-filespace,ACCESS_KEY,SECRET_KEY
-    minio-user00002,minio-user00002-filespace,,  # 空白時使用環境變數
+    python gen_external_storage.py --help
+    python gen_external_storage.py  # 使用預設值：import/import-accounts.csv 和 mounts.json
+    python gen_external_storage.py --csv import-accounts.csv --output mounts.json
+    python gen_external_storage.py --csv import/import-accounts.csv --output mounts.json
 
 CSV 格式範例 (import-accounts.csv):
     Dept_name,Emp_no,Capacity
@@ -515,92 +511,6 @@ def process_csv_rows(
     return mounts, stats
 
 
-def generate_from_csv(
-    csv_path: str,
-    logger: logging.Logger,
-    bucket_suffix: str = "-filespace",
-    hostname: str | None = None,
-    port: str | None = None,
-    region: str | None = None,
-    use_ssl: bool = False,
-    use_path_style: bool = True,
-    state_path: Path | None = None,
-    resume: bool = True,
-) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """
-    從 CSV 檔案讀取使用者清單並產生掛載設定
-
-    CSV 欄位:
-        - user_id: 使用者 ID（必填）
-        - bucket_name: Bucket 名稱（選填，預設為 {user_id}{bucket_suffix}）
-        - access_key: Access Key（選填，空白時使用環境變數）
-        - secret_key: Secret Key（選填，空白時使用環境變數）
-
-    Args:
-        csv_path: CSV 檔案路徑
-        bucket_suffix: Bucket 名稱後綴（當 CSV 未提供 bucket_name 時使用）
-        hostname: MinIO/S3 主機位址（None 時從環境變數讀取）
-        port: 連接埠（None 時從環境變數讀取）
-        region: AWS Region（None 時從環境變數讀取）
-        use_ssl: 是否啟用 SSL
-        use_path_style: 是否啟用 Path Style
-        state_path: 狀態檔案路徑（用於斷點續傳）
-        resume: 是否啟用斷點續傳
-        logger: Logger 物件
-
-    Returns:
-        (掛載設定清單, 統計資訊字典)
-    """
-
-    def extract_user_id(row: dict[str, str]) -> str:
-        """從 CSV 列提取 user_id"""
-        return row.get("user_id", "").strip()
-
-    def generate_mount(
-        row: dict[str, str], user_id: str, config: dict[str, str], mount_id: int
-    ) -> dict[str, Any]:
-        """產生掛載設定"""
-        # 產生 bucket 名稱
-        if row.get("bucket_name", "").strip():
-            bucket_name = row["bucket_name"].strip()
-        else:
-            bucket_name = generate_bucket_name_from_user_id(user_id, bucket_suffix)
-
-        access_key = row.get("access_key", "").strip() or config["access_key"]
-        secret_key = row.get("secret_key", "").strip() or config["secret_key"]
-
-        return generate_mount_config(
-            mount_id=mount_id,
-            user_id=user_id,
-            bucket_name=bucket_name,
-            access_key=access_key,
-            secret_key=secret_key,
-            hostname=hostname or config["hostname"],
-            port=port or config["port"],
-            region=region or config["region"],
-            use_ssl=use_ssl,
-            use_path_style=use_path_style,
-        )
-
-    # 讀取 CSV 檔案
-    with open(csv_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
-
-    # 使用共用處理邏輯
-    mounts, stats = process_csv_rows(
-        rows=rows,
-        user_id_extractor=extract_user_id,
-        mount_generator=generate_mount,
-        csv_path=csv_path,
-        state_path=state_path,
-        resume=resume,
-        logger=logger,
-    )
-
-    return mounts, stats
-
-
 def generate_from_import_csv(
     csv_path: str,
     logger: logging.Logger,
@@ -730,18 +640,21 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 範例:
-  # 從 users.csv 讀取使用者清單（欄位: user_id,bucket_name,access_key,secret_key）
-  python gen_external_storage.py.py --csv users.csv --output mounts.json
+  # 使用預設值（import/import-accounts.csv 和 mounts.json）
+  python gen_external_storage.py
 
-  # 從 import-accounts.csv 讀取（欄位: Dept_name,Emp_no,Capacity）
-  python gen_external_storage.py.py --import-csv import-accounts.csv --output mounts.json
+  # 從 import 目錄下的 import-accounts.csv 讀取（欄位: Dept_name,Emp_no,Capacity）
+  python gen_external_storage.py --csv import-accounts.csv --output mounts.json
+
+  # 指定完整路徑（仍會自動加上 import/ 前綴）
+  python gen_external_storage.py --csv import/import-accounts.csv --output mounts.json
 
   # 自訂 MinIO 連線設定（覆蓋環境變數）
-  python gen_external_storage.py.py --csv users.csv \\
+  python gen_external_storage.py --csv import-accounts.csv \\
       --hostname minio.example.com --port 443 --use-ssl --output mounts.json
 
   # 停用斷點續傳
-  python gen_external_storage.py.py --csv users.csv --output mounts.json --no-resume
+  python gen_external_storage.py --csv import-accounts.csv --output mounts.json --no-resume
 
 匯入指令:
   php occ files_external:import --dry mounts.json  # 預覽
@@ -749,18 +662,13 @@ def main() -> int:
         """,
     )
 
-    # 資料來源（二擇一）
-    source_group = parser.add_mutually_exclusive_group(required=True)
-    source_group.add_argument(
+    # 資料來源（可選，預設為 import/import-accounts.csv）
+    parser.add_argument(
         "--csv",
         type=str,
-        help="CSV 檔案路徑（欄位: user_id, bucket_name, access_key, secret_key）",
-    )
-    source_group.add_argument(
-        "--import-csv",
-        type=str,
+        default="import/import-accounts.csv",
         dest="import_csv",
-        help="import-accounts.csv 格式檔案路徑（欄位: Dept_name, Emp_no）",
+        help="import-accounts.csv 格式檔案路徑（欄位: Dept_name, Emp_no, Capacity），檔案會從 import 目錄讀取（預設: import/import-accounts.csv）",
     )
 
     # 輸出設定
@@ -768,8 +676,8 @@ def main() -> int:
         "--output",
         "-o",
         type=str,
-        default="external_storage_mounts.json",
-        help="輸出 JSON 檔案路徑（預設: external_storage_mounts.json）",
+        default="mounts.json",
+        help="輸出 JSON 檔案路徑（預設: mounts.json）",
     )
 
     # MinIO/S3 連線設定（可選，預設從環境變數讀取）
@@ -838,7 +746,7 @@ def main() -> int:
         "--log-file",
         type=str,
         default=None,
-        help="記錄檔案路徑（預設: {output}.log）",
+        help="記錄檔案路徑（預設: logs/gen-mount.log）",
     )
 
     args = parser.parse_args()
@@ -848,12 +756,29 @@ def main() -> int:
     state_path = (
         Path(args.state_file) if args.state_file else output_path.with_suffix(".state.json")
     )
-    log_path = Path(args.log_file) if args.log_file else output_path.with_suffix(".log")
+    log_path = Path(args.log_file) if args.log_file else Path("logs/gen-mount.log")
 
     # 初始化 logger（總是初始化，即使沒有 log_file 也會輸出到 console）
     logger = setup_logger(log_path)
     logger.info(f"=== 執行記錄開始: {datetime.now().isoformat()} ===")
-    logger.info(f"CSV 檔案: {args.csv or args.import_csv}")
+
+    # 統一檔案來源為 import 目錄
+    csv_path_str = args.import_csv
+    csv_path = Path(csv_path_str)
+
+    # 如果路徑不是絕對路徑且不包含 import 目錄，自動加上 import/ 前綴
+    if not csv_path.is_absolute():
+        # 檢查路徑的第一個部分是否為 "import"
+        parts = csv_path.parts
+        if len(parts) == 0 or parts[0] != "import":
+            csv_path = Path("import") / csv_path_str
+            csv_path_str = str(csv_path)
+
+    if not csv_path.exists():
+        logger.error(f"❌ CSV 檔案不存在: {csv_path}")
+        return 1
+
+    logger.info(f"CSV 檔案: {csv_path}")
     logger.info(f"輸出檔案: {args.output}")
     logger.info(f"狀態檔案: {state_path}")
     logger.info("=" * 60)
@@ -863,44 +788,18 @@ def main() -> int:
     try:
         resume = not args.no_resume
 
-        if args.csv:
-            csv_path_str = args.csv
-            csv_path = Path(csv_path_str)
-            if not csv_path.exists():
-                logger.error(f"❌ CSV 檔案不存在: {args.csv}")
-                return 1
-
-            mounts, stats = generate_from_csv(
-                csv_path=csv_path_str,
-                logger=logger,
-                bucket_suffix=args.bucket_suffix,
-                hostname=args.hostname,
-                port=args.port,
-                region=args.region,
-                use_ssl=args.use_ssl,
-                use_path_style=not args.no_path_style,
-                state_path=state_path if resume else None,
-                resume=resume,
-            )
-        else:
-            csv_path_str = args.import_csv
-            csv_path = Path(csv_path_str)
-            if not csv_path.exists():
-                logger.error(f"❌ CSV 檔案不存在: {args.import_csv}")
-                return 1
-
-            mounts, stats = generate_from_import_csv(
-                csv_path=csv_path_str,
-                logger=logger,
-                bucket_suffix=args.bucket_suffix,
-                hostname=args.hostname,
-                port=args.port,
-                region=args.region,
-                use_ssl=args.use_ssl,
-                use_path_style=not args.no_path_style,
-                state_path=state_path if resume else None,
-                resume=resume,
-            )
+        mounts, stats = generate_from_import_csv(
+            csv_path=csv_path_str,
+            logger=logger,
+            bucket_suffix=args.bucket_suffix,
+            hostname=args.hostname,
+            port=args.port,
+            region=args.region,
+            use_ssl=args.use_ssl,
+            use_path_style=not args.no_path_style,
+            state_path=state_path if resume else None,
+            resume=resume,
+        )
 
         if not mounts:
             logger.error("❌ 未產生任何掛載設定")

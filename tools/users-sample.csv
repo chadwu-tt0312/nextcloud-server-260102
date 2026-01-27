@@ -1,4 +1,0 @@
-user_id,bucket_name,access_key,secret_key
-minio-user00001,minio-user00001-filespace,VOR9QID1QHPSMXABC001,wJalrXUtnFEMI/K7MDENG/SECRET001
-minio-user00002,minio-user00002-filespace,VOR9QID1QHPSMXABC002,wJalrXUtnFEMI/K7MDENG/SECRET002
-minio-user00003,minio-user00003-filespace,,

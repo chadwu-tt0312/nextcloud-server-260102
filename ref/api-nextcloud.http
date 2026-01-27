@@ -3,20 +3,66 @@ curl -X GET http://localhost:8085/apps/files_external/globalstorages \
   -H "Authorization: Basic admin password123" \
   -H "OCS-APIRequest: true"
 
-###
+### 1. GET all external storages
 @ADMIN_INFO = admin:password123
 @ACCESS_KEY = ZEPNGTC059NIHD4KHYVW
 @SECRET_KEY = xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj
 curl -X GET "http://localhost:8085/apps/files_external/globalstorages" \
   -u "{{ADMIN_INFO}}" \
-  -H "OCS-APIRequest: true"
+  -H "OCS-APIRequest: true" \
+  -H "Content-Type: application/json"
 
-###
+# --- response 200 ---
+{
+  "1": {
+    "id": 1,
+    "mountPoint": "\/local-01",
+    "backend": "local",
+    "authMechanism": "null::null",
+    "backendOptions": {
+      "datadir": "\/var\/local\/path001"
+    },
+    "priority": 150,
+    "mountOptions": {
+      "encrypt": true,
+      "previews": true,
+      "enable_sharing": false,
+      "filesystem_check_changes": 1,
+      "encoding_compatibility": false,
+      "readonly": false
+    },
+    "userProvided": false,
+    "type": "system"
+  },
+  "12": {
+    "id": 12,
+    "mountPoint": "\/minio-DEPT_SMG_ARC1",
+    "backend": "amazons3",
+    "authMechanism": "amazons3::accesskey",
+    "backendOptions": {
+      "bucket": "dep-smg-arc1-filespace",
+      "hostname": "192.168.31.180",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "legacy_auth": false,
+      "useMultipartCopy": true,
+      "key": "ZEPNGTC059NIHD4KHYVW",
+      "secret": "__unmodified__"
+    },
+    "priority": 100,
+    "userProvided": false,
+    "type": "system"
+  }
+}
+
+### 2. GET an existing external storage
 curl -X GET "http://localhost:8085/apps/files_external/globalstorages/10" \
   -u "{{ADMIN_INFO}}" \
   -H "OCS-APIRequest: true"
 
-### Create a new S3 external storage  
+### 3. Create a new S3 external storage  
 curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
   -u "{{ADMIN_INFO}}" \
   -H "OCS-APIRequest: true" \
@@ -42,7 +88,30 @@ curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
     "applicableGroups": []
   }'
 
-###
+# --- response 201 ---
+{
+  "id": 12,
+  "mountPoint": "\/minio-DEPT_SMG_ARC1",
+  "backend": "amazons3",
+  "authMechanism": "amazons3::accesskey",
+  "backendOptions": {
+    "bucket": "dep-smg-arc1-filespace",
+    "hostname": "192.168.31.180",
+    "port": "9000",
+    "region": "us-east-1",
+    "use_ssl": false,
+    "use_path_style": true,
+    "legacy_auth": false,
+    "useMultipartCopy": true,
+    "key": "ZEPNGTC059NIHD4KHYVW",
+    "secret": "__unmodified__"
+  },
+  "status": 0,
+  "userProvided": false,
+  "type": "system"
+}
+
+### 4. Create a new local external storage  
 curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
   -u "{{ADMIN_INFO}}" \
   -H "OCS-APIRequest: true" \
@@ -56,7 +125,7 @@ curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
   }
 }'
 
-### Update an existing global storage (ID: 10)
+### 5. Update an existing external storage (ID: 10)
 curl -X PUT "http://localhost:8085/apps/files_external/globalstorages/10" \
   -u "admin:password123" \
   -H "OCS-APIRequest: true" \
@@ -79,7 +148,9 @@ curl -X PUT "http://localhost:8085/apps/files_external/globalstorages/10" \
     }
   }'
 
-### Delete a global storage (ID: 11)
-curl -X DELETE "http://localhost:8085/apps/files_external/globalstorages/11" \
+### 6. Delete an existing external storage (ID: 12)
+curl -X DELETE "http://localhost:8085/apps/files_external/globalstorages/12" \
   -u "admin:password123" \
   -H "OCS-APIRequest: true"
+
+# --- response 204 (No Content) ---

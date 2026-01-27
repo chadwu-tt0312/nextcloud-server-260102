@@ -1,0 +1,146 @@
+{
+  "csv_path": "import/import-accounts.csv",
+  "last_updated": "2026-01-27T11:28:00.908405",
+  "total_rows": 6,
+  "processed_count": 6,
+  "processed_data": {
+    "minio-DEPT_SMG_ARC1": {
+      "hash": "0c4082b667a3dd867582971f772a4c0d32423a613d2832d6e83c4ceb64506525",
+      "mount": {
+        "mount_id": 1,
+        "mount_point": "/minio-DEPT_SMG_ARC1",
+        "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+        "authentication_type": "amazons3::accesskey",
+        "configuration": {
+          "bucket": "dept-smg-arc1-filespace",
+          "hostname": "192.168.31.180",
+          "port": "9000",
+          "region": "us-east-1",
+          "use_ssl": false,
+          "use_path_style": true,
+          "key": "ZEPNGTC059NIHD4KHYVW",
+          "secret": "xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj"
+        },
+        "options": {},
+        "applicable_users": [],
+        "applicable_groups": []
+      },
+      "processed_at": "2026-01-27T11:28:00.907349"
+    },
+    "minio-DEPT_SMG_ARC5": {
+      "hash": "a7d4d391c06b7ed093946242091c1715daa36187debebcf4357c6c76bf1ed38f",
+      "mount": {
+        "mount_id": 2,
+        "mount_point": "/minio-DEPT_SMG_ARC5",
+        "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+        "authentication_type": "amazons3::accesskey",
+        "configuration": {
+          "bucket": "dept-smg-arc5-filespace",
+          "hostname": "192.168.31.180",
+          "port": "9000",
+          "region": "us-east-1",
+          "use_ssl": false,
+          "use_path_style": true,
+          "key": "ZEPNGTC059NIHD4KHYVW",
+          "secret": "xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj"
+        },
+        "options": {},
+        "applicable_users": [],
+        "applicable_groups": []
+      },
+      "processed_at": "2026-01-27T11:28:00.907349"
+    },
+    "minio-00059094": {
+      "hash": "127370942a0c65026903a225ad8172fbb0c854f41ba4cbdd2351fde899f3379e",
+      "mount": {
+        "mount_id": 3,
+        "mount_point": "/minio-00059094",
+        "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+        "authentication_type": "amazons3::accesskey",
+        "configuration": {
+          "bucket": "00059094-filespace",
+          "hostname": "192.168.31.180",
+          "port": "9000",
+          "region": "us-east-1",
+          "use_ssl": false,
+          "use_path_style": true,
+          "key": "ZEPNGTC059NIHD4KHYVW",
+          "secret": "xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj"
+        },
+        "options": {},
+        "applicable_users": [],
+        "applicable_groups": []
+      },
+      "processed_at": "2026-01-27T11:28:00.907349"
+    },
+    "minio-00059012": {
+      "hash": "80f42df291682c1ea85f77b47c9e383c482da2ae4e5f1ffac0a628213f93c71e",
+      "mount": {
+        "mount_id": 4,
+        "mount_point": "/minio-00059012",
+        "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+        "authentication_type": "amazons3::accesskey",
+        "configuration": {
+          "bucket": "00059012-filespace",
+          "hostname": "192.168.31.180",
+          "port": "9000",
+          "region": "us-east-1",
+          "use_ssl": false,
+          "use_path_style": true,
+          "key": "ZEPNGTC059NIHD4KHYVW",
+          "secret": "xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj"
+        },
+        "options": {},
+        "applicable_users": [],
+        "applicable_groups": []
+      },
+      "processed_at": "2026-01-27T11:28:00.908405"
+    },
+    "minio-SMG_ARC304": {
+      "hash": "c867566203800595dea7c240ac35359bcc3d6afa721d4e085fce7fb0aceeb74c",
+      "mount": {
+        "mount_id": 5,
+        "mount_point": "/minio-SMG_ARC304",
+        "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+        "authentication_type": "amazons3::accesskey",
+        "configuration": {
+          "bucket": "smg-arc304-filespace",
+          "hostname": "192.168.31.180",
+          "port": "9000",
+          "region": "us-east-1",
+          "use_ssl": false,
+          "use_path_style": true,
+          "key": "ZEPNGTC059NIHD4KHYVW",
+          "secret": "xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj"
+        },
+        "options": {},
+        "applicable_users": [],
+        "applicable_groups": []
+      },
+      "processed_at": "2026-01-27T11:28:00.908405"
+    },
+    "minio-SMG_Arc305": {
+      "hash": "0c16f6c0c4d47597941a7fe82fffdf352a5788a14a56fb40711494760d1d26dd",
+      "mount": {
+        "mount_id": 6,
+        "mount_point": "/minio-SMG_Arc305",
+        "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+        "authentication_type": "amazons3::accesskey",
+        "configuration": {
+          "bucket": "smg-arc305-filespace",
+          "hostname": "192.168.31.180",
+          "port": "9000",
+          "region": "us-east-1",
+          "use_ssl": false,
+          "use_path_style": true,
+          "key": "ZEPNGTC059NIHD4KHYVW",
+          "secret": "xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj"
+        },
+        "options": {},
+        "applicable_users": [],
+        "applicable_groups": []
+      },
+      "processed_at": "2026-01-27T11:28:00.908405"
+    }
+  }
+}
