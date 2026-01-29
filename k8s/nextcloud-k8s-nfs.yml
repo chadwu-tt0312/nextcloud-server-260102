@@ -1,0 +1,208 @@
+# Nextcloud on Kubernetes（全部使用 NFS 路徑，不依賴 StorageClass）
+#
+# 所有 PV 皆為手動 NFS，需在 NFS server 10.11.109.21 預先建立目錄：
+#   /gpfsvol/khome/k8s48964/nextcloud/data
+#   /gpfsvol/khome/k8s48964/nextcloud/db
+#   /gpfsvol/khome/k8s48964/nextcloud/local
+#
+# Secret 建立（勿將含密碼的 .env 提交版控）：
+#   kubectl create secret generic nextcloud-env --from-env-file=nextcloud.env -n <namespace>
+# 範例檔見 nextcloud.env.example
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-data-pv
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 10.11.109.21
+    path: /gpfsvol/khome/k8s48964/nextcloud/data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  volumeName: nextcloud-data-pv
+---
+# DB 用 NFS；StatefulSet 建立的 PVC 會綁定此 PV（volumeClaimTemplates 不設 storageClassName）
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mariadb-data-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 10.11.109.21
+    path: /gpfsvol/khome/k8s48964/nextcloud/db
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-local-pv
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 10.11.109.21
+    path: /gpfsvol/khome/k8s48964/nextcloud/local
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-local-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  volumeName: nextcloud-local-pv
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nextcloud-db
+spec:
+  serviceName: nextcloud-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud-db
+  template:
+    metadata:
+      labels:
+        app: nextcloud-db
+    spec:
+      imagePullSecrets:
+        - name: rpasecret
+      containers:
+        - name: mariadb
+          image: 10.11.233.138/nextcloud/mariadb:10.11.15
+          envFrom:
+            - secretRef:
+                name: nextcloud-env
+          ports:
+            - containerPort: 3306
+              name: mysql
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: ""
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-db
+  labels:
+    app: nextcloud-db
+spec:
+  type: ClusterIP
+  selector:
+    app: nextcloud-db
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      imagePullSecrets:
+        - name: rpasecret
+      containers:
+        - name: nextcloud
+          image: 10.11.233.138/nextcloud/nextcloud:32.0.3
+          envFrom:
+            - secretRef:
+                name: nextcloud-env
+          ports:
+            - containerPort: 80
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    for i in $(seq 1 60); do
+                      php /var/www/html/occ status 2>/dev/null && break
+                      sleep 10
+                    done
+                    php /var/www/html/occ config:system:set trusted_domains 1 --value='*' || true
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: nextcloud-data
+              mountPath: /var/www/html
+            - name: nextcloud-local
+              mountPath: /var/local
+      volumes:
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-pvc
+        - name: nextcloud-local
+          persistentVolumeClaim:
+            claimName: nextcloud-local-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud
+spec:
+  type: NodePort
+  selector:
+    app: nextcloud
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30805

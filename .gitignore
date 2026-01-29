@@ -180,6 +180,7 @@ cypress/videos
 
 /.direnv
 .env
+k8s/nextcloud.env
 .cursorindexingignore
 .specstory/
 pass/
