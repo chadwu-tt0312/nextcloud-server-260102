@@ -1,0 +1,181 @@
+# Nextcloud on Kubernetes（使用 StorageClass 動態配置）
+#
+# 本檔：nextcloud-pvc、nextcloud-db 的 volumeClaimTemplates 依賴 storageClassName: rpa-sc-nfs。
+# 若改為全 NFS 路徑、不依賴 StorageClass，請使用 nextcloud-k8s-nfs.yml。
+#
+# Secret 建立（勿將含密碼的 .env 提交版控）：
+#   kubectl create secret generic nextcloud-env --from-env-file=nextcloud.env -n <namespace>
+# 範例檔見 nextcloud.env.example
+#
+# 若要以 repo 的 config/config.php 作為 trusted_domains 等設定來源（取代 postStart 的 occ 指令）：
+#   kubectl create secret generic nextcloud-config --from-file=config.php=../config/config.php -n <namespace>
+# config.php 已不含 DB 密碼等敏感資料，改由 nextcloud-env 的 NC_* 覆寫（見 nextcloud.env.example）。
+#
+# PVC 說明：DB 儲存由 StatefulSet volumeClaimTemplates 自動建立 (mariadb-data-nextcloud-db-0)；
+# 以下為 Nextcloud 應用與本地資料用 PVC。
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: rpa-sc-nfs
+---
+# 使用 NFS 固定路徑
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-local-pv
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 10.11.109.21
+    path: /gpfsvol/khome/k8s48964/nextcloud/local
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-local-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  volumeName: nextcloud-local-pv
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nextcloud-db
+spec:
+  serviceName: nextcloud-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud-db
+  template:
+    metadata:
+      labels:
+        app: nextcloud-db
+    spec:
+      imagePullSecrets:
+        - name: rpasecret
+      containers:
+        - name: mariadb
+          image: 10.11.233.138/nextcloud/mariadb:10.11.15
+          envFrom:
+            - secretRef:
+                name: nextcloud-env
+          ports:
+            - containerPort: 3306
+              name: mysql
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: rpa-sc-nfs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-db
+  labels:
+    app: nextcloud-db
+spec:
+  type: ClusterIP
+  selector:
+    app: nextcloud-db
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      imagePullSecrets:
+        - name: rpasecret
+      containers:
+        - name: nextcloud
+          image: 10.11.233.138/nextcloud/nextcloud:32.0.3
+          envFrom:
+            - secretRef:
+                name: nextcloud-env
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: nextcloud-data
+              mountPath: /var/www/html
+            - name: nextcloud-local
+              mountPath: /var/local
+            # 掛載 repo 的 config.php，使 trusted_domains 等由檔案決定（需先建立 nextcloud-config Secret）
+            - name: nextcloud-config
+              mountPath: /var/www/html/config/config.php
+              subPath: config.php
+      volumes:
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-pvc
+        - name: nextcloud-local
+          persistentVolumeClaim:
+            claimName: nextcloud-local-pvc
+        - name: nextcloud-config
+          secret:
+            secretName: nextcloud-config
+            optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud
+spec:
+  type: NodePort
+  selector:
+    app: nextcloud
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30805
