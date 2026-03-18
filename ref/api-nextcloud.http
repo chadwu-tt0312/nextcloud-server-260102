@@ -5,8 +5,8 @@ curl -X GET http://localhost:8085/apps/files_external/globalstorages \
 
 ### 1. GET all external storages
 @ADMIN_INFO = admin:password123
-@ACCESS_KEY = ZEPNGTC059NIHD4KHYVW
-@SECRET_KEY = xh3RYBfwY2wFhtX6o87Zw+vUTX+WjAEhuk+W3vdj
+@ACCESS_KEY = ZVK4V3T0NZ4B7BLP7YTY
+@SECRET_KEY = zmRC9wzglihIWupbVShxELR4bqCCZyHDDc2skg2S
 curl -X GET "http://localhost:8085/apps/files_external/globalstorages" \
   -u "{{ADMIN_INFO}}" \
   -H "OCS-APIRequest: true" \
@@ -68,11 +68,11 @@ curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
   -H "OCS-APIRequest: true" \
   -H "Content-Type: application/json" \
   -d '{
-    "mountPoint": "/minio-DEPT_SMG_ARC1",
+    "mountPoint": "/minio-SMG_ARC304",
     "backend": "amazons3",
     "authMechanism": "amazons3::accesskey",
     "backendOptions": {
-      "bucket": "dep-smg-arc1-filespace",
+      "bucket": "smg-arc304-filespace",
       "hostname": "192.168.31.180",
       "port": "9000",
       "region": "us-east-1",
@@ -84,7 +84,7 @@ curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
       "secret": "{{SECRET_KEY}}"
     },
     "mountOptions": {},
-    "applicableUsers": [],
+    "applicableUsers": ["SMG_ARC304"],
     "applicableGroups": []
   }'
 
@@ -127,7 +127,7 @@ curl -X POST "http://localhost:8085/apps/files_external/globalstorages" \
 
 ### 5. Update an existing external storage (ID: 10)
 curl -X PUT "http://localhost:8085/apps/files_external/globalstorages/10" \
-  -u "admin:password123" \
+  -u "{{ADMIN_INFO}}" \
   -H "OCS-APIRequest: true" \
   -H "Content-Type: application/json" \
   -d '{
@@ -150,7 +150,40 @@ curl -X PUT "http://localhost:8085/apps/files_external/globalstorages/10" \
 
 ### 6. Delete an existing external storage (ID: 12)
 curl -X DELETE "http://localhost:8085/apps/files_external/globalstorages/12" \
-  -u "admin:password123" \
+  -u "{{ADMIN_INFO}}" \
   -H "OCS-APIRequest: true"
 
 # --- response 204 (No Content) ---
+
+### 7. Get User(SMG_ARC304) UID
+curl -X GET "http://localhost:8085/ocs/v1.php/cloud/users?search=SMG_ARC304&format=json" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true" \
+  -H "Accept: application/json"
+
+### 7.1. Get User(00059094) UID
+curl -X GET "http://localhost:8085/ocs/v1.php/cloud/users?search=Hui%20Yu%20Huang&format=json" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true" \
+  -H "Accept: application/json"
+
+### 7.2. Get User(00059094) UID
+curl -X GET "http://localhost:8085/ocs/v1.php/cloud/users?search=00059094&format=json" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true" \
+  -H "Accept: application/json"
+
+### 列出所有使用者 UID
+curl "http://localhost:8085/ocs/v2.php/cloud/users?format=json" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true"
+
+### 搜尋特定使用者（用 search 參數）
+curl "http://localhost:8085/ocs/v2.php/cloud/users?search=00059094&format=json" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true"
+
+### 取得特定使用者的詳細資訊（含 UID、email、displayname 等）
+curl "http://localhost:8085/ocs/v2.php/cloud/users/00059094?format=json" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true" 

@@ -1,91 +1,11 @@
-# Nextcloud on Kubernetes（全部使用 NFS 路徑，不依賴 StorageClass）
-#
-# 所有 PV 皆為手動 NFS，需在 NFS server 10.11.109.21 預先建立目錄：
+# 需在 NFS server 10.11.109.21 預先建立目錄：
 #   /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/data
 #   /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/local
 #   /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/db
 #
-# Secret 建立（勿將含密碼的 .env 提交版控）：
+# Secret 建立：
 #   kubectl create secret generic nextcloud-env --from-env-file=nextcloud.env -n <namespace>
 # 範例檔見 nextcloud.env.example
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: nextcloud-data-pv
-spec:
-  capacity:
-    storage: 20Gi
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  nfs:
-    server: 10.11.109.21
-    path: /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/data
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: nextcloud-data-pvc
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 20Gi
-  volumeName: nextcloud-data-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: nextcloud-local-pv
-spec:
-  capacity:
-    storage: 50Gi
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  nfs:
-    server: 10.11.109.21
-    path: /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/local
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: nextcloud-local-pvc
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 50Gi
-  volumeName: nextcloud-local-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: mariadb-data-pv
-spec:
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  nfs:
-    server: 10.11.109.21
-    path: /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/db
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mariadb-data-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
-  volumeName: mariadb-data-pv
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -125,8 +45,9 @@ spec:
               mountPath: /var/lib/mysql
       volumes:
         - name: mariadb-data
-          persistentVolumeClaim:
-            claimName: mariadb-data-pvc
+          nfs:
+            server: 10.11.109.21
+            path: /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/db
 ---
 apiVersion: v1
 kind: Service
@@ -195,16 +116,21 @@ spec:
               mountPath: /var/local
       volumes:
         - name: nextcloud-data
-          persistentVolumeClaim:
-            claimName: nextcloud-data-pvc
+          nfs:
+            server: 10.11.109.21
+            path: /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/data
         - name: nextcloud-local
-          persistentVolumeClaim:
-            claimName: nextcloud-local-pvc
+          nfs:
+            server: 10.11.109.21
+            path: /gpfsvol/UGPTs_prod/Tanzu/smgpjt/nextcloud/local
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: nextcloud
+  labels:
+    app: nextcloud
 spec:
   type: NodePort
   selector:

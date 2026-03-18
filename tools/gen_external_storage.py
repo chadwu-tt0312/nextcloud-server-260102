@@ -13,9 +13,8 @@ Nextcloud External Storage Configuration Generator
 
 用法:
     python gen_external_storage.py --help
-    python gen_external_storage.py  # 使用預設值：import/import-accounts.csv 和 mounts.json
-    python gen_external_storage.py --csv import-accounts.csv --output mounts.json
-    python gen_external_storage.py --csv import/import-accounts.csv --output mounts.json
+    python gen_external_storage.py  # 使用預設值：import/import-accounts.csv 和 import/mounts.json
+    python gen_external_storage.py --csv import/import-accounts.csv --output import/mounts.json
 
 CSV 格式範例 (import-accounts.csv):
     Dept_name,Emp_no,Capacity
@@ -32,18 +31,21 @@ import csv
 import hashlib
 import json
 import logging
-import os
-import re
 import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
-from dotenv import load_dotenv
-
-# 載入 .env 環境變數
-load_dotenv()
+import httpx
+from tools_external_storage import (
+    build_amazons3_configuration,
+    generate_bucket_name_from_user_id,
+    get_env_config,
+    get_nextcloud_config,
+    sanitize_bucket_name,
+    setup_logger,
+)
 
 # ============================================================================
 # 常數定義
@@ -54,115 +56,144 @@ PROGRESS_REPORT_INTERVAL = 100  # 每 100 筆顯示進度
 STATE_SAVE_INTERVAL = 500  # 每 500 筆儲存狀態
 STATE_SAVE_TIME_INTERVAL = 30  # 每 30 秒儲存狀態
 
-# 超大檔案定義（目前已知使用場景在 5 萬筆內，不需要特殊處理）
-LARGE_FILE_THRESHOLD = 50000  # 超過此筆數可考慮優化，但目前不處理
-
 
 # ============================================================================
-# 工具函數
+# 工具函數（Nextcloud UID、狀態檔、掛載產生等，仍為本腳本專用）
 # ============================================================================
 
 
-def get_env_config() -> dict[str, str]:
+def fetch_nextcloud_user_uid(
+    client: httpx.Client,
+    nextcloud_url: str,
+    username: str,
+    password: str,
+    search: str,
+) -> tuple[bool, str, str | None]:
     """
-    從環境變數讀取 MinIO 連線設定
+    從 Nextcloud OCS API 查詢使用者 UID（帳號名稱，即 getUID() 值，用於 applicable_users）
 
-    Returns:
-        包含 hostname, port, region, access_key, secret_key 的字典
-    """
-    from urllib.parse import urlparse
-
-    minio_url = os.getenv("ENV_MINIO_URL", "http://localhost:9000")
-    parsed = urlparse(minio_url)
-
-    return {
-        "hostname": parsed.hostname or "localhost",
-        "port": str(parsed.port or 9000),
-        "region": os.getenv("ENV_REGION", "us-east-1"),
-        "access_key": os.getenv("ENV_MINIO_ACCESS_KEY", ""),
-        "secret_key": os.getenv("ENV_MINIO_SECRET_KEY", ""),
-    }
-
-
-def sanitize_bucket_name(name: str) -> str:
-    """
-    將名稱轉換為符合 S3/MinIO bucket 命名規則的格式
-
-    規則：
-    - 只能用 a-z、0-9、點 (.)、連字號 (-)
-    - 長度 3-63 字元
-    - 開頭結尾不能是 . 或 -
-    - 不能有連續的點
+    對應 api-nextcloud.http 的請求：
+      GET /ocs/v1.php/cloud/users?search=<keyword>&format=json
+    API 回傳的 data.users 為 UID 陣列（與「設定→使用者」的「帳號名稱」一致）。
 
     Args:
-        name: 原始名稱
+        client: httpx Client（可重複使用以降低連線成本）
+        nextcloud_url: Nextcloud 伺服器 URL（例如 http://host:port/）
+        username: Nextcloud 管理者帳號
+        password: Nextcloud 管理者密碼
+        search: 搜尋關鍵字（工號、顯示名稱等；LDAP 需設定「用於使用者搜尋的屬性」才能以工號搜到）
 
     Returns:
-        符合規則的 bucket 名稱
+        (success, message, uid) 其中 uid 為 Nextcloud 帳號名稱，可直接用於 applicable_users
     """
-    # 1. 轉小寫
-    result = name.lower()
+    search = search.strip()
+    if not search:
+        return False, "search 不能為空字串", None
 
-    # 2. 將底線、斜線和反斜線替換為連字號
-    result = result.replace("_", "-").replace("/", "-").replace("\\", "-")
+    url = f"{nextcloud_url.rstrip('/')}/ocs/v1.php/cloud/users"
+    try:
+        response = client.get(
+            url,
+            params={"search": search, "format": "json"},
+            auth=(username, password),
+            headers={
+                "OCS-APIRequest": "true",
+                "Accept": "application/json",
+            },
+        )
+        response.raise_for_status()
+        payload = response.json()
 
-    # 3. 移除不允許的字元（只保留 a-z, 0-9, ., -）
-    result = re.sub(r"[^a-z0-9.-]", "", result)
+        ocs = payload.get("ocs", {}) if isinstance(payload, dict) else {}
+        meta = ocs.get("meta", {}) if isinstance(ocs, dict) else {}
+        statuscode = meta.get("statuscode", 100)
+        try:
+            statuscode_int = int(statuscode)
+        except (TypeError, ValueError):
+            statuscode_int = 100
 
-    # 4. 將連續的點替換為單一點
-    result = re.sub(r"\.{2,}", ".", result)
+        if statuscode_int != 100:
+            return False, f"OCS API 回傳 statuscode={statuscode}", None
 
-    # 5. 將連續的連字號替換為單一連字號
-    result = re.sub(r"-{2,}", "-", result)
+        data = ocs.get("data", {}) if isinstance(ocs, dict) else {}
+        users = data.get("users", []) if isinstance(data, dict) else []
 
-    # 6. 移除開頭的 . 或 -
-    result = result.lstrip(".-")
+        candidates: list[str] = []
+        if isinstance(users, list):
+            candidates = [u for u in users if isinstance(u, str)]
 
-    # 7. 移除結尾的 . 或 -
-    result = result.rstrip(".-")
+        if not candidates:
+            return False, f"找不到符合的使用者（search={search}）", None
 
-    # 8. 確保長度在 3-63 之間
-    if len(result) < 3:
-        result = result.ljust(3, "0")  # 補 0 到最小長度
-    elif len(result) > 63:
-        result = result[:63].rstrip(".-")  # 截斷並移除結尾的 . 或 -
+        if search in candidates:
+            return True, "查詢成功", search
 
-    return result
+        search_lower = search.lower()
+        for candidate in candidates:
+            if candidate.lower() == search_lower:
+                return True, "查詢成功", candidate
+
+        return True, "查詢成功", candidates[0]
+
+    except httpx.TimeoutException:
+        return False, f"Nextcloud API 連線逾時: {url}", None
+    except httpx.HTTPStatusError as e:
+        return (
+            False,
+            f"Nextcloud API 回應錯誤 (HTTP {e.response.status_code}): {url}",
+            None,
+        )
+    except Exception as e:
+        return False, f"Nextcloud UID 查詢失敗: {e}", None
 
 
-def generate_bucket_name_from_user_id(user_id: str, bucket_suffix: str = "-filespace") -> str:
+def build_nextcloud_uid_resolver(
+    client: httpx.Client,
+    nextcloud_url: str,
+    username: str,
+    password: str,
+    logger: logging.Logger,
+) -> Callable[[str], str]:
     """
-    從 user_id 產生符合 MinIO 命名規則的 bucket 名稱
-
-    轉換邏輯：
-    1. 移除 "minio-" 前綴（如果存在）
-    2. 使用 sanitize_bucket_name() 處理
-    3. 加上 bucket_suffix
-
-    範例：
-    - "minio-DEPT_SMG_ARC1" -> "dept-smg-arc1-filespace"
-    - "minio-00059094" -> "00059094-filespace"
+    建立帶快取的 Nextcloud UID 查詢函數
 
     Args:
-        user_id: 使用者 ID（例如：minio-DEPT_SMG_ARC1）
-        bucket_suffix: Bucket 名稱後綴（預設：-filespace）
+        client: httpx Client
+        nextcloud_url: Nextcloud URL
+        username: 帳號
+        password: 密碼
+        logger: Logger
 
     Returns:
-        符合 MinIO 命名規則的 bucket 名稱
+        resolve(search) -> uid 的函數；查不到時會 raise ValueError
     """
-    # 移除 "minio-" 前綴（如果存在）
-    if user_id.startswith("minio-"):
-        base_name = user_id[6:]  # 移除 "minio-" (6 個字元)
-    else:
-        base_name = user_id
+    cache: dict[str, str | None] = {}
 
-    # 使用 sanitize_bucket_name() 處理
-    sanitized = sanitize_bucket_name(base_name)
+    def resolve(search: str) -> str:
+        key = search.strip()
+        if key in cache:
+            uid = cache[key]
+            if not uid:
+                raise ValueError(f"無法取得 Nextcloud UID（search={key}）：已快取為查無此人")
+            return uid
 
-    # 加上後綴
-    bucket_name = f"{sanitized}{bucket_suffix}"
+        success, message, uid = fetch_nextcloud_user_uid(
+            client=client,
+            nextcloud_url=nextcloud_url,
+            username=username,
+            password=password,
+            search=key,
+        )
+        if not success or not uid:
+            cache[key] = None
+            raise ValueError(f"無法取得 Nextcloud UID（search={key}）：{message}")
 
-    return bucket_name
+        if uid != key:
+            logger.info(f"🔎 Nextcloud UID 映射: {key} -> {uid}")
+        cache[key] = uid
+        return uid
+
+    return resolve
 
 
 def calculate_row_hash(row: dict[str, str]) -> str:
@@ -179,52 +210,6 @@ def calculate_row_hash(row: dict[str, str]) -> str:
     sorted_items = sorted(row.items())
     row_str = "|".join(f"{k}:{v}" for k, v in sorted_items)
     return hashlib.sha256(row_str.encode("utf-8")).hexdigest()
-
-
-def setup_logger(log_file: Path | None = None) -> logging.Logger:
-    """
-    設定 logger（使用 Python logging 模組）
-    - 總是輸出到 console（使用 StreamHandler）
-    - 如果提供 log_file，同時輸出到檔案
-
-    Args:
-        log_file: 記錄檔案路徑（None 時只輸出到 console）
-
-    Returns:
-        Logger 物件
-    """
-    logger = logging.getLogger("gen_external_storage.py")
-    logger.setLevel(logging.INFO)
-
-    # 避免重複添加 handler
-    if logger.handlers:
-        return logger
-
-    # 設定格式（不包含時間戳記，因為訊息中已包含）
-    formatter = logging.Formatter("%(message)s")
-
-    # 建立 console handler（總是輸出到 console）
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    # 如果提供 log_file，建立檔案 handler
-    if log_file:
-        try:
-            # 確保目錄存在
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-
-            # 建立檔案 handler（追加模式）
-            file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
-            file_handler.setLevel(logging.INFO)
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-
-        except IOError as e:
-            logger.warning(f"⚠️  警告：無法設定日誌檔案 {log_file}: {e}")
-
-    return logger
 
 
 def load_state_file(state_path: Path, csv_path: str) -> dict[str, dict[str, Any]]:
@@ -327,29 +312,34 @@ def generate_mount_config(
         region: AWS Region
         use_ssl: 是否啟用 SSL
         use_path_style: 是否啟用 Path Style
-        applicable_users: 適用使用者清單（空陣列表示所有使用者）
+        applicable_users: 適用使用者清單（必須為 Nextcloud 的 UID／帳號名稱，與「設定→使用者」中的「帳號名稱」一致；None 時由 user_id 推導為單一使用者）
         applicable_groups: 適用群組清單
 
     Returns:
         掛載設定字典
     """
+    # 未傳入時由 user_id 推導：去掉 minio- 前綴。注意：Nextcloud 外部儲存比對的是 getUID()，故必須使用「帳號名稱」而非顯示名稱
+    effective_users: list[str] = (
+        applicable_users if applicable_users is not None else [user_id.removeprefix("minio-")]
+    )
+    configuration = build_amazons3_configuration(
+        bucket=bucket_name,
+        hostname=hostname,
+        port=port,
+        region=region,
+        use_ssl=use_ssl,
+        use_path_style=use_path_style,
+        key=access_key,
+        secret=secret_key,
+    )
     return {
         "mount_id": mount_id,
         "mount_point": f"/{user_id}",
         "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
         "authentication_type": "amazons3::accesskey",
-        "configuration": {
-            "bucket": bucket_name,
-            "hostname": hostname,
-            "port": port,
-            "region": region,
-            "use_ssl": use_ssl,
-            "use_path_style": use_path_style,
-            "key": access_key,
-            "secret": secret_key,
-        },
+        "configuration": configuration,
         "options": {},
-        "applicable_users": applicable_users or [],
+        "applicable_users": effective_users,
         "applicable_groups": applicable_groups or [],
     }
 
@@ -520,6 +510,10 @@ def generate_from_import_csv(
     region: str | None = None,
     use_ssl: bool = False,
     use_path_style: bool = True,
+    nextcloud_url: str | None = None,
+    nextcloud_username: str | None = None,
+    nextcloud_password: str | None = None,
+    resolve_nextcloud_uid: bool = True,
     state_path: Path | None = None,
     resume: bool = True,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -545,11 +539,40 @@ def generate_from_import_csv(
         use_path_style: 是否啟用 Path Style
         state_path: 狀態檔案路徑（用於斷點續傳）
         resume: 是否啟用斷點續傳
-        log_file: 記錄檔案路徑
 
     Returns:
         (掛載設定清單, 統計資訊字典)
     """
+    nextcloud_client: httpx.Client | None = None
+    resolve_uid: Callable[[str], str] | None = None
+
+    if resolve_nextcloud_uid:
+        env_nextcloud = get_nextcloud_config()
+        effective_nextcloud_url = nextcloud_url or env_nextcloud["url"]
+        effective_nextcloud_username = nextcloud_username or env_nextcloud["username"]
+        effective_nextcloud_password = nextcloud_password or env_nextcloud["password"]
+
+        if (
+            effective_nextcloud_url
+            and effective_nextcloud_username
+            and effective_nextcloud_password
+        ):
+            nextcloud_client = httpx.Client(timeout=30.0)
+            resolve_uid = build_nextcloud_uid_resolver(
+                client=nextcloud_client,
+                nextcloud_url=effective_nextcloud_url,
+                username=effective_nextcloud_username,
+                password=effective_nextcloud_password,
+                logger=logger,
+            )
+        else:
+            raise RuntimeError(
+                "❌ 未提供完整 Nextcloud 連線設定（ENV_NEXTCLOUD_URL / ENV_NEXTCLOUD_USER / ENV_NEXTCLOUD_PASSWORD），"
+                "無法查詢使用者真正的 UID。applicable_users 必須使用 Nextcloud 的 UID（帳號名稱），"
+                "否則使用者將無法看到外部磁碟。\n"
+                "  → 請設定上述環境變數（或在 .env 檔案中加入），再重新執行。\n"
+                "  → 若確定 CSV 的 Emp_no / Dept_name 即為 Nextcloud 帳號名稱，可加上 --no-nextcloud-uid-lookup 跳過此檢查。"
+            )
 
     def extract_user_id(row: dict[str, str]) -> str:
         """從 CSV 列提取 user_id"""
@@ -561,6 +584,7 @@ def generate_from_import_csv(
         elif dept_name:
             return f"minio-DEPT_{dept_name}"
         else:
+            logger.info(f"dept_name={dept_name}, emp_no={emp_no}, row={row}")
             return ""  # 無法提取，將在 process_csv_rows 中處理為錯誤
 
     def generate_mount(
@@ -568,6 +592,11 @@ def generate_from_import_csv(
     ) -> dict[str, Any]:
         """產生掛載設定"""
         bucket_name = generate_bucket_name_from_user_id(user_id, bucket_suffix)
+        nextcloud_user_key = user_id.removeprefix("minio-")
+        # 必須使用 Nextcloud UID（帳號名稱）；resolve_uid 透過 OCS API 查詢取得正確 UID，LDAP 若為 UUID 帳號名稱時不可用 --no-nextcloud-uid-lookup
+        applicable_users = (
+            [resolve_uid(nextcloud_user_key)] if resolve_uid else [nextcloud_user_key]
+        )
 
         return generate_mount_config(
             mount_id=mount_id,
@@ -580,25 +609,29 @@ def generate_from_import_csv(
             region=region or config["region"],
             use_ssl=use_ssl,
             use_path_style=use_path_style,
+            applicable_users=applicable_users,
         )
 
     # 讀取 CSV 檔案
-    with open(csv_path, "r", encoding="utf-8") as f:
+    with open(csv_path, "r", encoding="utf-8-sig") as f:  # "utf-8"
         reader = csv.DictReader(f)
         rows = list(reader)
 
-    # 使用共用處理邏輯
-    mounts, stats = process_csv_rows(
-        rows=rows,
-        user_id_extractor=extract_user_id,
-        mount_generator=generate_mount,
-        csv_path=csv_path,
-        state_path=state_path,
-        resume=resume,
-        logger=logger,
-    )
-
-    return mounts, stats
+    try:
+        # 使用共用處理邏輯
+        mounts, stats = process_csv_rows(
+            rows=rows,
+            user_id_extractor=extract_user_id,
+            mount_generator=generate_mount,
+            csv_path=csv_path,
+            state_path=state_path,
+            resume=resume,
+            logger=logger,
+        )
+        return mounts, stats
+    finally:
+        if nextcloud_client:
+            nextcloud_client.close()
 
 
 def save_mounts_json(mounts: list[dict[str, Any]], output_path: str) -> None:
@@ -618,8 +651,8 @@ def save_mounts_json(mounts: list[dict[str, Any]], output_path: str) -> None:
     file_size = output_file.stat().st_size
     file_size_mb = file_size / (1024 * 1024)
 
-    # 使用 logger 輸出（如果 logger 已初始化）
-    logger = logging.getLogger("gen_external_storage.py")
+    # 使用 logger 輸出（若主程式已呼叫 setup_logger，則與主程式共用同一 logger）
+    logger = logging.getLogger("gen_external_storage")
     if logger.handlers:
         logger.info(f"✅ 已產生 {len(mounts)} 個掛載設定至 {output_path}")
         logger.info(f"   檔案大小: {file_size_mb:.2f} MB")
@@ -640,25 +673,25 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 範例:
-  # 使用預設值（import/import-accounts.csv 和 mounts.json）
+  # 使用預設值（import/import-accounts.csv 和 import/mounts.json）
   python gen_external_storage.py
 
   # 從 import 目錄下的 import-accounts.csv 讀取（欄位: Dept_name,Emp_no,Capacity）
-  python gen_external_storage.py --csv import-accounts.csv --output mounts.json
+  python gen_external_storage.py --csv import-accounts.csv --output import/mounts.json
 
   # 指定完整路徑（仍會自動加上 import/ 前綴）
-  python gen_external_storage.py --csv import/import-accounts.csv --output mounts.json
+  python gen_external_storage.py --csv import/import-accounts.csv --output import/mounts.json
 
   # 自訂 MinIO 連線設定（覆蓋環境變數）
   python gen_external_storage.py --csv import-accounts.csv \\
-      --hostname minio.example.com --port 443 --use-ssl --output mounts.json
+      --hostname minio.example.com --port 443 --use-ssl --output import/mounts.json
 
   # 停用斷點續傳
-  python gen_external_storage.py --csv import-accounts.csv --output mounts.json --no-resume
+  python gen_external_storage.py --csv import-accounts.csv --output import/mounts.json --no-resume
 
 匯入指令:
-  php occ files_external:import --dry mounts.json  # 預覽
-  php occ files_external:import mounts.json        # 正式匯入
+  php occ files_external:import --dry import/mounts.json  # 預覽
+  php occ files_external:import import/mounts.json        # 正式匯入
         """,
     )
 
@@ -676,8 +709,8 @@ def main() -> int:
         "--output",
         "-o",
         type=str,
-        default="mounts.json",
-        help="輸出 JSON 檔案路徑（預設: mounts.json）",
+        default="import/mounts.json",
+        help="輸出 JSON 檔案路徑（預設: import/mounts.json）",
     )
 
     # MinIO/S3 連線設定（可選，預設從環境變數讀取）
@@ -710,16 +743,9 @@ def main() -> int:
         help="停用 Path Style（預設: 啟用）",
     )
     parser.add_argument(
-        "--access-key",
-        type=str,
-        default=None,
-        help="Access Key（預設從 ENV_MINIO_ACCESS_KEY 讀取）",
-    )
-    parser.add_argument(
-        "--secret-key",
-        type=str,
-        default=None,
-        help="Secret Key（預設從 ENV_MINIO_SECRET_KEY 讀取）",
+        "--no-nextcloud-uid-lookup",
+        action="store_true",
+        help="停用 Nextcloud UID 查詢，沿用 CSV 鍵值（如 Emp_no）作為 applicable_users；僅當該鍵值即為 Nextcloud 帳號名稱時使用（LDAP 若為 UUID 帳號名稱請勿使用）",
     )
 
     # Bucket 命名設定
@@ -740,7 +766,7 @@ def main() -> int:
         "--state-file",
         type=str,
         default=None,
-        help="狀態檔案路徑（預設: {output}.state.json）",
+        help="狀態檔案路徑（預設: import/{output 檔名}.state.json）",
     )
     parser.add_argument(
         "--log-file",
@@ -751,15 +777,17 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    # 設定狀態檔案和記錄檔案路徑
+    # 設定狀態檔案和記錄檔案路徑（預設狀態檔一律在 import/ 下，檔名為輸出檔名加 .state.json）
     output_path = Path(args.output)
     state_path = (
-        Path(args.state_file) if args.state_file else output_path.with_suffix(".state.json")
+        Path(args.state_file)
+        if args.state_file
+        else Path("import") / f"{output_path.stem}.state.json"
     )
     log_path = Path(args.log_file) if args.log_file else Path("logs/gen-mount.log")
 
     # 初始化 logger（總是初始化，即使沒有 log_file 也會輸出到 console）
-    logger = setup_logger(log_path)
+    logger = setup_logger(log_path, logger_name="gen_external_storage")
     logger.info(f"=== 執行記錄開始: {datetime.now().isoformat()} ===")
 
     # 統一檔案來源為 import 目錄
@@ -797,6 +825,7 @@ def main() -> int:
             region=args.region,
             use_ssl=args.use_ssl,
             use_path_style=not args.no_path_style,
+            resolve_nextcloud_uid=not args.no_nextcloud_uid_lookup,
             state_path=state_path if resume else None,
             resume=resume,
         )
@@ -825,8 +854,8 @@ def main() -> int:
         return 0
 
     except Exception as e:
-        # 如果 logger 尚未初始化，使用 print 作為後備方案
-        logger = logging.getLogger("gen_external_storage.py")
+        # 若 logger 尚未初始化，使用 print 作為後備方案
+        logger = logging.getLogger("gen_external_storage")
         if logger.handlers:
             logger.error("")
             logger.error(f"❌ 發生錯誤: {e}")
