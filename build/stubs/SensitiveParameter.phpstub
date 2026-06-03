@@ -1,5 +1,0 @@
-<?php
-
-#[\Attribute(Attribute::TARGET_PARAMETER)]
-class SensitiveParameter {
-}

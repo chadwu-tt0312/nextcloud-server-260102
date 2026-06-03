@@ -186,5 +186,5 @@ k8s/nextcloud.env
 pass/
 apipark/
 
-build/
-dist/
+/build/
+/dist/
