@@ -185,3 +185,6 @@ k8s/nextcloud.env
 .specstory/
 pass/
 apipark/
+
+build/
+dist/
