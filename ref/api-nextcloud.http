@@ -186,4 +186,26 @@ curl "http://localhost:8085/ocs/v2.php/cloud/users?search=00059094&format=json" 
 ### 取得特定使用者的詳細資訊（含 UID、email、displayname 等）
 curl "http://localhost:8085/ocs/v2.php/cloud/users/00059094?format=json" \
   -u "{{ADMIN_INFO}}" \
-  -H "OCS-APIRequest: true" 
+  -H "OCS-APIRequest: true"
+
+### 8. 建立新使用者（建立時即設 quota=0 B，避免 skeleton 佔用約 54.8MB）
+# Body 為 form-urlencoded，非 JSON。建議搭配系統設定 skeletondirectory=""（見 tools/README.md）
+curl -X POST "http://localhost:8085/ocs/v2.php/cloud/users" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true" \
+  -H "Accept: application/json" \
+  -d "userid=00059094" \
+  -d "password=ChangeMe123!" \
+  -d "displayName=00059094" \
+  -d "quota=0%20B"
+
+# --- response 200 (OCS statuscode 100) ---
+# {"ocs":{"meta":{"status":"ok","statuscode":100},"data":{"id":"00059094"}}}
+
+### 8.1 修改既有使用者的 quota（等同 set_user_quota.py）
+curl -X PUT "http://localhost:8085/ocs/v2.php/cloud/users/00059094" \
+  -u "{{ADMIN_INFO}}" \
+  -H "OCS-APIRequest: true" \
+  -H "Accept: application/json" \
+  -d "key=quota" \
+  -d "value=0%20B"
