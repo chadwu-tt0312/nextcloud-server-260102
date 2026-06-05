@@ -1,43 +1,44 @@
 #!/bin/bash
 #
-# Nextcloud 批次設定 Files App 個人偏好 (Docker)
+# Nextcloud 批次取消「檔案設定 → 其他設定」兩個勾選 (Docker)
 #
 # 用途（對應需求 Q2）：
-#   批次取消每個帳號「個人設定 → 其他設定」的勾選。
+#   批次取消每個帳號「檔案設定 → 其他設定」的兩個勾選：
+#     - Show recommendations      → recommendations / enabled
+#     - Show folder description   → text / workspace_enabled
 #
 # 原理說明：
-#   這些勾選是 Files app 的 per-user 偏好（存於 oc_preferences, appid=files）。
-#   - OCS Preferences API 只能設定「登入者自己」，且 files app 未註冊驗證
-#     listener，admin 無法替他人設定 → 因此只能用 occ。
-#   - occ user:setting <uid> files <key> <value> 可由 admin 對任意帳號設定。
-#
-# 合法的 files key（見 apps/files/lib/Service/UserConfig.php ALLOWED_CONFIGS）：
-#   crop_image_previews, default_view, folder_tree, grid_view,
-#   show_dialog_deletion, show_dialog_file_extension, show_files_extensions,
-#   show_hidden, show_mime_column, sort_favorites_first, sort_folders_first
-#   值：1 = 勾選, 0 = 取消勾選
+#   這兩個勾選由外部 app 透過 OCA.Files.Settings 注入，存於 oc_preferences，
+#   不屬於 files app 的 UserConfig.php。
+#   - OCS Preferences API 只能設定「登入者自己」，admin 無法代設他人偏好
+#   - occ user:setting <uid> <app> <key> <value> 可由 admin 對任意帳號設定
 #
 # 用法:
-#   # 1) 先 inspect 任一帳號，確認「其他設定」兩個勾選的實際 key
+#   # 1) 先 inspect 任一帳號，確認目前狀態
 #   ./set_files_settings_docker.sh --inspect <uid>
 #
-#   # 2) 預覽批次設定（請依 inspect 結果調整 --keys）
-#   ./set_files_settings_docker.sh --keys "folder_tree show_mime_column" --value 0 --dry-run
+#   # 2) 預覽批次取消兩個勾選
+#   ./set_files_settings_docker.sh --dry-run
 #
 #   # 3) 正式批次套用所有帳號
-#   ./set_files_settings_docker.sh --keys "folder_tree show_mime_column" --value 0
+#   ./set_files_settings_docker.sh -y
 #
 
 set -euo pipefail
 
 # 預設值
 CONTAINER_NAME=""
-KEYS="folder_tree show_mime_column"   # 預設值；請以 --inspect 結果為準調整
 VALUE="0"
 USERS=""
 INSPECT_UID=""
 DRY_RUN=false
 AUTO_CONFIRM=false
+
+# Q2：其他設定兩個勾選（app:key）
+SETTINGS=(
+    "recommendations:enabled"
+    "text:workspace_enabled"
+)
 
 # 顏色輸出
 RED='\033[0;31m'
@@ -51,18 +52,21 @@ usage() {
     echo ""
     echo "選項:"
     echo "  -c, --container NAME   指定容器名稱（預設：自動偵測含 nextcloud 的容器）"
-    echo "      --inspect UID      列出該帳號目前所有 files 偏好（用來確認 key）後結束"
-    echo "  -k, --keys \"K1 K2\"     要設定的 files key（空白分隔，預設: \"$KEYS\"）"
+    echo "      --inspect UID      列出該帳號目前 recommendations / text 偏好後結束"
     echo "      --value V          設定值（1=勾選, 0=取消勾選；預設: $VALUE）"
     echo "  -u, --users \"u1 u2\"    只處理指定帳號（空白分隔）；未指定時處理所有帳號"
     echo "  -d, --dry-run          僅預覽，不實際執行"
     echo "  -y, --yes              自動確認，不詢問"
     echo "  -h, --help             顯示此說明"
     echo ""
+    echo "固定取消的兩個勾選："
+    echo "  recommendations enabled         (Show recommendations)"
+    echo "  text workspace_enabled          (Show folder description)"
+    echo ""
     echo "範例:"
     echo "  $0 --inspect minio-DEPT_A"
-    echo "  $0 --keys \"folder_tree show_mime_column\" --value 0 --dry-run"
-    echo "  $0 --keys \"folder_tree show_mime_column\" --value 0 -y"
+    echo "  $0 --dry-run"
+    echo "  $0 -y"
 }
 
 # 解析參數
@@ -70,7 +74,6 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --container|-c) CONTAINER_NAME="$2"; shift 2 ;;
         --inspect)      INSPECT_UID="$2"; shift 2 ;;
-        --keys|-k)      KEYS="$2"; shift 2 ;;
         --value)        VALUE="$2"; shift 2 ;;
         --users|-u)     USERS="$2"; shift 2 ;;
         --dry-run|-d)   DRY_RUN=true; shift ;;
@@ -105,12 +108,15 @@ occ() {
     docker exec -u www-data "${CONTAINER_NAME}" php occ "$@"
 }
 
-# Inspect 模式：列出該帳號目前所有 files 偏好後結束
+# Inspect 模式
 if [[ -n "$INSPECT_UID" ]]; then
-    echo -e "${BLUE}🔎 帳號 ${INSPECT_UID} 目前的 files 偏好：${NC}"
-    occ user:setting "${INSPECT_UID}" files
+    echo -e "${BLUE}🔎 帳號 ${INSPECT_UID} 目前的「其他設定」偏好：${NC}"
     echo ""
-    echo -e "${YELLOW}ℹ️  請從上面找出「其他設定」兩個勾選對應的 key，再用 --keys 指定。${NC}"
+    echo -e "${YELLOW}recommendations (Show recommendations):${NC}"
+    occ user:setting "${INSPECT_UID}" recommendations || true
+    echo ""
+    echo -e "${YELLOW}text (Show folder description):${NC}"
+    occ user:setting "${INSPECT_UID}" text || true
     exit 0
 fi
 
@@ -119,17 +125,14 @@ if [[ -n "$USERS" ]]; then
     read -r -a USER_ARR <<< "$USERS"
 else
     echo -e "${BLUE}📋 取得所有使用者...${NC}"
-    # user:list --output=json 會回傳 {"uid":"displayname",...}
     USER_JSON=$(occ user:list --output=json)
     mapfile -t USER_ARR < <(echo "$USER_JSON" | jq -r 'keys[]')
 fi
 
-read -r -a KEY_ARR <<< "$KEYS"
-
 echo -e "${BLUE}📋 設定資訊：${NC}"
 echo "  容器名稱: ${CONTAINER_NAME}"
 echo "  使用者數: ${#USER_ARR[@]}"
-echo "  設定 key: ${KEYS}"
+echo "  設定項目: recommendations/enabled, text/workspace_enabled"
 echo "  設定值  : ${VALUE}"
 echo "  Dry-run : ${DRY_RUN}"
 
@@ -155,17 +158,19 @@ FAILED=0
 START_TIME=$(date +%s)
 
 for uid in "${USER_ARR[@]}"; do
-    for key in "${KEY_ARR[@]}"; do
+    for setting in "${SETTINGS[@]}"; do
+        app="${setting%%:*}"
+        key="${setting#*:}"
         if [[ "$DRY_RUN" == true ]]; then
-            echo -e "${YELLOW}[DRY RUN]${NC} occ user:setting ${uid} files ${key} ${VALUE}"
+            echo -e "${YELLOW}[DRY RUN]${NC} occ user:setting ${uid} ${app} ${key} ${VALUE}"
             SUCCESS=$((SUCCESS + 1))
             continue
         fi
-        if occ user:setting "${uid}" files "${key}" "${VALUE}" >/dev/null 2>&1; then
-            echo -e "${GREEN}✓${NC} ${uid} files ${key} = ${VALUE}"
+        if occ user:setting "${uid}" "${app}" "${key}" "${VALUE}" >/dev/null 2>&1; then
+            echo -e "${GREEN}✓${NC} ${uid} ${app} ${key} = ${VALUE}"
             SUCCESS=$((SUCCESS + 1))
         else
-            echo -e "${RED}❌${NC} ${uid} files ${key} 設定失敗" >&2
+            echo -e "${RED}❌${NC} ${uid} ${app} ${key} 設定失敗" >&2
             FAILED=$((FAILED + 1))
         fi
     done

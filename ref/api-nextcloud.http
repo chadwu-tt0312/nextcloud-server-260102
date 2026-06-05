@@ -209,3 +209,10 @@ curl -X PUT "http://localhost:8085/ocs/v2.php/cloud/users/00059094" \
   -H "Accept: application/json" \
   -d "key=quota" \
   -d "value=0%20B"
+
+### 建立後修改 quota（既有帳號或建立時未帶 quota）
+curl -X PUT "http://localhost:8085/ocs/v2.php/cloud/users/00059094" \
+  -u "admin:password123" \
+  -H "OCS-APIRequest: true" \
+  -d "key=quota" \
+  -d "value=0%20B"

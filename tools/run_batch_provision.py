@@ -8,7 +8,7 @@ Nextcloud 批次帳號處理「驅動器」(Docker)
   3. docker exec 執行 batch_provision.php（單次 bootstrap、內部迴圈）
        - 清除 skeleton 範本檔（或清空 home）
        - 設定 quota（預設 0 B）
-       - 設定 files 偏好（取消「其他設定」勾選）
+       - 取消「檔案設定 → 其他設定」兩個勾選（預設）
   4. （可選）執行 occ trashbin:cleanup 真正釋放被刪檔案
 
 安全預設：
@@ -20,9 +20,9 @@ Nextcloud 批次帳號處理「驅動器」(Docker)
 用法:
     python run_batch_provision.py --help
     # 乾跑：對所有帳號清 skeleton + quota=0 + 取消兩個勾選
-    python run_batch_provision.py --all --keys folder_tree,show_mime_column
+    python run_batch_provision.py --all
     # 正式執行
-    python run_batch_provision.py --all --keys folder_tree,show_mime_column --apply
+    python run_batch_provision.py --all --apply
     # 只處理指定帳號
     python run_batch_provision.py --users minio-DEPT_A,minio-DEPT_B --apply
 """
@@ -40,19 +40,50 @@ from tools_external_storage import get_nextcloud_config, setup_logger
 from tools_user_admin import fetch_all_users
 
 # 預設 skeleton 頂層項目（core/skeleton 內的示範檔/資料夾名稱）
+# fallback 白名單；實際執行時 batch_provision.php 會再掃描容器內 core/skeleton 併入
 DEFAULT_SKELETON_NAMES = [
     "Documents",
     "Photos",
     "Templates",
+    "Templates credits.md",
     "Nextcloud.png",
     "Nextcloud intro.mp4",
     "Nextcloud Manual.pdf",
     "Reasons to use Nextcloud.pdf",
     "Readme.md",
+    "welcome.txt",
 ]
 
 REMOTE_SCRIPT_PATH = "/tmp/batch_provision.php"
 REMOTE_CONFIG_PATH = "/tmp/batch_config.json"
+
+# Q2：檔案設定 → 其他設定（兩個勾選，由外部 app 註冊，非 files UserConfig）
+DEFAULT_ADDITIONAL_SETTINGS = {
+    "recommendations": {"enabled": "0"},       # Show recommendations
+    "text": {"workspace_enabled": "0"},        # Show folder description
+}
+# docker cp 預設為 root 擁有、權限偏嚴；php 以 www-data 執行時無法讀取
+CONTAINER_RUN_USER = "www-data"
+
+
+def fix_container_file_permissions(
+    container: str,
+    paths: list[str],
+    logger,
+    owner: str = CONTAINER_RUN_USER,
+) -> None:
+    """docker cp 後將檔案 chown/chmod，讓 www-data 可讀取。"""
+    quoted = " ".join(paths)
+    cmd = (
+        f"chown {owner}:{owner} {quoted} && chmod 644 {quoted}"
+    )
+    subprocess.run(
+        ["docker", "exec", "-u", "root", container, "sh", "-c", cmd],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    logger.info(f"已設定容器內檔案權限（owner={owner}）: {', '.join(paths)}")
 
 
 def detect_container(logger) -> str | None:
@@ -121,12 +152,10 @@ def main() -> int:
     )
     parser.add_argument("--no-quota", action="store_true", help="不變更 quota")
     parser.add_argument(
-        "--keys",
-        type=str,
-        default="",
-        help="要設定的 files 偏好 key（逗號分隔），例如 folder_tree,show_mime_column",
+        "--skip-additional-settings",
+        action="store_true",
+        help="跳過 Q2（不取消「其他設定」兩個勾選）",
     )
-    parser.add_argument("--value", type=str, default="0", help="偏好設定值（預設 0=取消勾選）")
 
     # 執行控制
     parser.add_argument("--apply", action="store_true", help="實際執行（未指定時為乾跑 dry-run）")
@@ -167,19 +196,20 @@ def main() -> int:
     logger.info(f"目標帳號數: {len(targets)}")
 
     # 3. 組裝 config
-    keys = [k.strip() for k in args.keys.split(",") if k.strip()]
-    prefs = {k: args.value for k in keys}
+    user_settings = {} if args.skip_additional_settings else DEFAULT_ADDITIONAL_SETTINGS
     batch_cfg = {
         "users": targets,
         "clear_files": args.clear_files,
         "skeleton_names": DEFAULT_SKELETON_NAMES,
         "set_quota": None if args.no_quota else args.quota,
-        "prefs": prefs,
+        "user_settings": user_settings,
         "dry_run": dry_run,
     }
     logger.info(f"清檔模式: {args.clear_files}")
     logger.info(f"quota: {'(不變更)' if args.no_quota else args.quota}")
-    logger.info(f"偏好設定: {prefs if prefs else '(無)'}")
+    logger.info(
+        f"其他設定: {user_settings if user_settings else '(跳過)'}"
+    )
     logger.info("=" * 60)
 
     php_script = Path(__file__).parent / "batch_provision.php"
@@ -199,10 +229,15 @@ def main() -> int:
         logger.info("複製腳本與設定進容器...")
         subprocess.run(["docker", "cp", str(php_script), f"{container}:{REMOTE_SCRIPT_PATH}"], check=True)
         subprocess.run(["docker", "cp", local_cfg, f"{container}:{REMOTE_CONFIG_PATH}"], check=True)
+        fix_container_file_permissions(
+            container,
+            [REMOTE_SCRIPT_PATH, REMOTE_CONFIG_PATH],
+            logger,
+        )
 
         # 6. 執行 batch_provision.php
         logger.info("執行 batch_provision.php...")
-        exec_cmd = ["docker", "exec", "-u", "www-data"]
+        exec_cmd = ["docker", "exec", "-u", CONTAINER_RUN_USER]
         if args.base:
             exec_cmd += ["-e", f"NC_BASE={args.base}"]
         exec_cmd += [container, "php", REMOTE_SCRIPT_PATH, REMOTE_CONFIG_PATH]
@@ -225,9 +260,11 @@ def main() -> int:
             if not row.get("ok", True):
                 logger.error(f"❌ {row.get('uid')}: {row.get('errors')}")
             else:
+                remaining = row.get("remaining")
+                extra = f" | 殘留 {remaining}" if remaining else ""
                 logger.info(
                     f"✓ {row.get('uid')} | 刪除 {len(row.get('deleted', []))} 項"
-                    f" | quota={row.get('quota')} | prefs={row.get('prefs')}"
+                    f" | quota={row.get('quota')} | user_settings={row.get('user_settings')}{extra}"
                 )
 
         if proc.stderr.strip():
@@ -243,7 +280,10 @@ def main() -> int:
         if args.cleanup_trash and not dry_run:
             logger.info("執行 occ trashbin:cleanup...")
             # 一次帶入多個帳號 = 單次 bootstrap
-            cleanup_cmd = ["docker", "exec", "-u", "www-data", container, "php", "occ", "trashbin:cleanup", *targets]
+            cleanup_cmd = [
+                "docker", "exec", "-u", CONTAINER_RUN_USER, container,
+                "php", "occ", "trashbin:cleanup", *targets,
+            ]
             cp = subprocess.run(cleanup_cmd, capture_output=True, text=True)
             logger.info(cp.stdout.strip() or "trashbin:cleanup 完成")
             if cp.stderr.strip():

@@ -186,5 +186,8 @@ k8s/nextcloud.env
 pass/
 apipark/
 
+# Python tools (uv)
+tools/.venv/
+
 build/
 dist/

@@ -1,0 +1,81 @@
+=== 執行記錄開始: 2026-06-05T17:11:05.614495 ===
+模式: DRY-RUN（乾跑）
+容器: chad-nextcloud-1
+目標帳號數: 1
+清檔模式: skeleton
+quota: 0 B
+偏好設定: (無)
+============================================================
+複製腳本與設定進容器...
+執行 batch_provision.php...
+Warning: file_get_contents(/tmp/batch_config.json): Failed to open stream: Permission denied in /tmp/batch_provision.php on line 45
+stderr: config JSON 解析失敗: /tmp/batch_config.json
+============================================================
+⚠️  未取得 summary，請檢查上方輸出
+ℹ️  這是乾跑模式，未實際變更。加上 --apply 才會執行。
+=== 執行記錄結束: 2026-06-05T17:11:06.534146 ===
+=== 執行記錄開始: 2026-06-05T17:12:47.533090 ===
+模式: DRY-RUN（乾跑）
+容器: chad-nextcloud-1
+目標帳號數: 1
+清檔模式: skeleton
+quota: 0 B
+偏好設定: (無)
+============================================================
+複製腳本與設定進容器...
+已設定容器內檔案權限（owner=www-data）: /tmp/batch_provision.php, /tmp/batch_config.json
+執行 batch_provision.php...
+✓ 00059094 | 刪除 7 項 | quota=0 B | prefs=[]
+============================================================
+✅ 完成：{'total': 1, 'ok': 1, 'failed': 0, 'deleted_files': 7, 'elapsed_sec': 0.04, 'dry_run': True}
+ℹ️  這是乾跑模式，未實際變更。加上 --apply 才會執行。
+=== 執行記錄結束: 2026-06-05T17:12:48.421525 ===
+=== 執行記錄開始: 2026-06-05T17:13:03.133132 ===
+模式: APPLY（實際執行）
+容器: chad-nextcloud-1
+目標帳號數: 1
+清檔模式: skeleton
+quota: 0 B
+偏好設定: (無)
+============================================================
+複製腳本與設定進容器...
+已設定容器內檔案權限（owner=www-data）: /tmp/batch_provision.php, /tmp/batch_config.json
+執行 batch_provision.php...
+✓ 00059094 | 刪除 7 項 | quota=0 B | prefs=[]
+============================================================
+✅ 完成：{'total': 1, 'ok': 1, 'failed': 0, 'deleted_files': 7, 'elapsed_sec': 0.4, 'dry_run': False}
+=== 執行記錄結束: 2026-06-05T17:13:04.374591 ===
+=== 執行記錄開始: 2026-06-05T17:19:34.203122 ===
+模式: APPLY（實際執行）
+容器: chad-nextcloud-1
+目標帳號數: 1
+清檔模式: skeleton
+quota: 0 B
+偏好設定: (無)
+============================================================
+複製腳本與設定進容器...
+已設定容器內檔案權限（owner=www-data）: /tmp/batch_provision.php, /tmp/batch_config.json
+執行 batch_provision.php...
+✓ 00059094 | 刪除 0 項 | quota=0 B | prefs=[]
+============================================================
+✅ 完成：{'total': 1, 'ok': 1, 'failed': 0, 'deleted_files': 0, 'elapsed_sec': 0.03, 'dry_run': False}
+執行 occ trashbin:cleanup...
+Remove deleted files of   00059094
+=== 執行記錄結束: 2026-06-05T17:19:35.943282 ===
+=== 執行記錄開始: 2026-06-05T17:21:38.453198 ===
+模式: APPLY（實際執行）
+容器: chad-nextcloud-1
+目標帳號數: 1
+清檔模式: skeleton
+quota: 0 B
+偏好設定: (無)
+============================================================
+複製腳本與設定進容器...
+已設定容器內檔案權限（owner=www-data）: /tmp/batch_provision.php, /tmp/batch_config.json
+執行 batch_provision.php...
+✓ 00059094 | 刪除 1 項 | quota=0 B | prefs=[]
+============================================================
+✅ 完成：{'total': 1, 'ok': 1, 'failed': 0, 'deleted_files': 1, 'elapsed_sec': 0.16, 'dry_run': False, 'skeleton_names_count': 15, 'skeleton_names_sample': ['Documents', 'Photos', 'Templates', 'Templates credits.md', 'Nextcloud.png', 'Nextcloud intro.mp4', 'Nextcloud Manual.pdf', 'Reasons to use Nextcloud.pdf', 'Readme.md', 'welcome.txt', '範本', '模板', 'Vorlagen', 'Modèles', 'テンプレート']}
+執行 occ trashbin:cleanup...
+Remove deleted files of   00059094
+=== 執行記錄結束: 2026-06-05T17:21:40.104877 ===

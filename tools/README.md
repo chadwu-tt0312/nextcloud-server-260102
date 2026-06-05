@@ -18,6 +18,7 @@
 | `set_files_settings_docker.sh` | Bash | 少量帳號用 `occ` 設 Files 偏好（不建議 1 萬筆） |
 | `import_external_storage_docker.sh` | Bash | `occ files_external:import` 匯入掛載 |
 | `import_external_storage_k8s.sh` | Bash | k8s 版匯入（本 README 不展開） |
+| `pyproject.toml` / `uv.lock` | uv 專案 | Python 相依與鎖定版本 |
 | `mounts.json` / `files_external-sample.json` | 資料 | 掛載設定範例 |
 
 日誌預設寫入 `tools/logs/`（執行時自動建立）。
@@ -40,6 +41,46 @@
 
 Python 腳本請在 **`tools/` 目錄**下執行，或確保 `PYTHONPATH` 能 import 到 `tools_external_storage`、`tools_user_admin`。
 
+### Python 環境（uv）
+
+本目錄為 **[uv](https://docs.astral.sh/uv/)** 專案（`pyproject.toml`）。Debian/Ubuntu 等系統若出現 `externally-managed-environment`，請用 uv，勿對系統 Python 直接 `pip install`。
+
+**安裝 uv**（擇一）：
+
+```bash
+# Linux / macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 或 pipx（同樣不污染系統 site-packages）
+pipx install uv
+```
+
+**初次設定**：
+
+```bash
+cd tools
+uv sync                              # 建立 .venv 並安裝相依套件
+uv run python run_batch_provision.py --help
+```
+
+**之後執行腳本**（無需手動 `activate`）：
+
+```bash
+cd tools
+uv run python set_user_quota.py --dry-run
+uv run python run_batch_provision.py --users <uid> --apply
+uv run python create_external_storage.py --dry-run
+```
+
+新增相依套件：
+
+```bash
+cd tools
+uv add <package>
+```
+
+Python 版本由 `.python-version` 指定（預設 3.12）；uv 會自動下載對應 interpreter（若本機沒有）。
+
 ---
 
 ## 需求對照
@@ -47,14 +88,14 @@ Python 腳本請在 **`tools/` 目錄**下執行，或確保 `PYTHONPATH` 能 im
 | 需求 | 做法 | 建議工具 |
 |------|------|----------|
 | **Q1** 禁止在個人空間新增檔案，只用外部 MinIO | 將 home **quota 設為 `0 B`**；外部掛載預設不計入 quota | `set_user_quota.py` 或 `run_batch_provision.py` |
-| **Q2** 批次取消「檔案設定 → 其他設定」勾選 | 寫入 `oc_preferences`（app=`files`） | `run_batch_provision.py`（大量）或 `set_files_settings_docker.sh`（少量） |
+| **Q2** 批次取消「檔案設定 → 其他設定」兩個勾選 | 寫入 `oc_preferences`（`recommendations/enabled`、`text/workspace_enabled`） | `run_batch_provision.py`（大量）或 `set_files_settings_docker.sh`（少量） |
 | **Q3** 清掉新帳號自帶的 skeleton（約 54.8MB）並設 quota=0 | 刪除 home 內範本檔 + 設 quota + 停掉未來 skeleton 複製 | `run_batch_provision.py` + 一次性 `occ` 系統設定 |
 
 ### 原理摘要
 
 - **Quota**：只包在 `HomeMountPoint` 上；`quota_include_external_storage` 預設 `false`，故 **quota=0 不影響 MinIO 掛載**。
 - **Skeleton**：新帳號建立時會從 `core/skeleton` 複製示範檔；若建立時已是 quota=0，複製常因空間不足被靜默略過（home 為空）。
-- **大量帳號（約 1 萬）**：避免 bash 迴圈逐筆 `occ`（每次完整 bootstrap PHP）。**清檔必須用 PHP 檔案 API**；**設 quota 可用 OCS 併發**；**清檔 + quota + prefs 合併** 用 `batch_provision.php` 只 bootstrap 一次。
+- **大量帳號（約 1 萬）**：避免 bash 迴圈逐筆 `occ`（每次完整 bootstrap PHP）。**清檔必須用 PHP 檔案 API**；**設 quota 可用 OCS 併發**；**清檔 + quota + 其他設定 合併** 用 `batch_provision.php` 只 bootstrap 一次。
 
 ---
 
@@ -64,7 +105,7 @@ Python 腳本請在 **`tools/` 目錄**下執行，或確保 `PYTHONPATH` 能 im
 flowchart TD
     A[0. 停掉未來 skeleton 複製<br/>occ config:system:set skeletondirectory] --> B[1. gen_external_storage.py<br/>產生 mounts.json]
     B --> C[2. create_external_storage.py<br/>或 import_external_storage_docker.sh]
-    C --> D[3. run_batch_provision.py<br/>清檔 + quota + Files 偏好]
+    C --> D[3. run_batch_provision.py<br/>清檔 + quota + 取消兩個勾選]
     D --> E[4. 可選 set_user_quota.py<br/>僅補設 quota]
 ```
 
@@ -93,30 +134,42 @@ python create_external_storage.py --mounts-file import/mounts.json
 
 ### 步驟 3：批次帳號處理（Q1 + Q2 + Q3）
 
-**先確認 Files 偏好的 key**（UI 翻譯可能與 key 名稱不同）：
+**Q2 對應的兩個勾選**（位於「檔案設定 → 其他設定」，由外部 app 註冊，**不在** `UserConfig.php`）：
+
+| UI 顯示 | app | key |
+|---------|-----|-----|
+| Show recommendations | `recommendations` | `enabled` |
+| Show folder description | `text` | `workspace_enabled` |
+
+可先 inspect 確認：
 
 ```bash
-docker exec -u www-data <容器> php occ user:setting <某帳號> files
+docker exec -u www-data <容器> php occ user:setting <某帳號> recommendations
+docker exec -u www-data <容器> php occ user:setting <某帳號> text
 ```
 
-合法 key 見 `apps/files/lib/Service/UserConfig.php`（例如 `folder_tree`、`show_mime_column`）。
-
-**乾跑（預設，不變更）**：
+**乾跑（預設，不變更；預設會取消兩個勾選）**：
 
 ```bash
-python run_batch_provision.py --all --keys folder_tree,show_mime_column
+python run_batch_provision.py --all
 ```
 
 **正式執行**：
 
 ```bash
-python run_batch_provision.py --all --keys folder_tree,show_mime_column --apply --cleanup-trash
+python run_batch_provision.py --all --apply --cleanup-trash
 ```
 
 **只處理指定帳號**：
 
 ```bash
-python run_batch_provision.py --users minio-DEPT_A,minio-DEPT_B --keys folder_tree,show_mime_column --apply
+python run_batch_provision.py --users minio-DEPT_A,minio-DEPT_B --apply
+```
+
+**跳過 Q2（不取消兩個勾選）**：
+
+```bash
+python run_batch_provision.py --all --apply --skip-additional-settings
 ```
 
 **從檔案讀取帳號清單**（每行一個 uid）：
@@ -150,7 +203,7 @@ python run_batch_provision.py --all --apply --base /var/www/html/lib/base.php
 1. **步驟 0**（一次性）：`skeletondirectory=""`、`templatedirectory=""`
 2. **建立帳號**：OCS `POST /ocs/v2.php/cloud/users`，`quota=0 B`（或 `0`）
 3. **外部儲存**：`create_external_storage.py` 或 `files_external:import`（該使用者的 MinIO 掛載）
-4. **Files 偏好**（可選）：`run_batch_provision.py --users <uid> --keys ... --apply --clear-files none --no-quota`（帳號已是空的則不必清檔）
+4. **取消兩個勾選**（可選）：`run_batch_provision.py --users <uid> --apply --clear-files none --no-quota`（帳號已是空的則不必清檔）
 
 ```mermaid
 flowchart LR
@@ -159,7 +212,7 @@ flowchart LR
     B -->|skeleton 仍開啟| D[複製失敗 → 空 home ✅]
     C --> E[建立 MinIO 掛載]
     D --> E
-    E --> F[可選：設 Files 偏好]
+    E --> F[可選：取消兩個勾選]
 ```
 
 ### API：建立使用者（含 quota）
@@ -238,14 +291,14 @@ assert meta.get("statuscode") in (100, 200), meta
 
 | 情境 | 做法 |
 |------|------|
-| **新帳號**（Provisioning 已帶 `quota=0 B` + 已關 skeleton） | 通常 **不必** 再跑 `run_batch_provision` 清檔；只需掛載 MinIO + 可選設 Files 偏好 |
-| **舊帳號**（已有 54.8 MB 範本檔） | `run_batch_provision.py --apply`（清 skeleton + quota + prefs） |
+| **新帳號**（Provisioning 已帶 `quota=0 B` + 已關 skeleton） | 通常 **不必** 再跑 `run_batch_provision` 清檔；只需掛載 MinIO + 可選取消兩個勾選 |
+| **舊帳號**（已有 54.8 MB 範本檔） | `run_batch_provision.py --apply`（清 skeleton + quota + 取消兩個勾選） |
 | **只補 quota** | `set_user_quota.py --users <uid>` |
 
 ### 注意事項
 
 - `quota` 合法值還包含 `default`、`none`、數字或人類可讀大小（如 `10 GB`）；本專案鎖定個人空間時請用 **`0` 或 `0 B`**，勿用 `none`（`none` 在部分設定代表「無限制」）。
-- Provisioning API **無法**在建立時一併寫入他人 `files` 偏好（Q2）；建立後請用 `run_batch_provision.py` 或 `occ user:setting`。
+- Provisioning API **無法**在建立時一併寫入他人 `recommendations` / `text` 偏好（Q2）；建立後請用 `run_batch_provision.py` 或 `occ user:setting`。
 - 更多 HTTP 範例見專案根目錄 [`ref/api-nextcloud.http`](../ref/api-nextcloud.http)（使用者建立 / 修改 quota 小節）。
 
 ---
@@ -262,15 +315,16 @@ assert meta.get("statuscode") in (100, 200), meta
 | `--clear-files` | `skeleton`（預設，只刪白名單）/ `all` / `none` |
 | `--quota` | 預設 `0 B` |
 | `--no-quota` | 不變更 quota |
-| `--keys` | Files 偏好 key，逗號分隔 |
-| `--value` | 偏好值，預設 `0`（取消勾選） |
+| `--skip-additional-settings` | 跳過 Q2（不取消「其他設定」兩個勾選） |
 | `--apply` | **必須加上才會實際執行**（否則為乾跑） |
 | `--cleanup-trash` | 完成後執行 `occ trashbin:cleanup` |
 | `-c, --container` | Docker 容器名稱（預設自動偵測名稱含 `nextcloud`） |
 
-**Skeleton 白名單**（`--clear-files skeleton` 時刪除的頂層名稱）：
+**Skeleton 清單**（`--clear-files skeleton`）：
 
-`Documents`, `Photos`, `Templates`, `Nextcloud.png`, `Nextcloud intro.mp4`, `Nextcloud Manual.pdf`, `Reasons to use Nextcloud.pdf`, `Readme.md`
+- `batch_provision.php` 會**自動掃描**容器內 `core/skeleton` 頂層檔名（含 `Templates credits.md` 等），並併入 Python 傳入的 fallback 清單。
+- 另納入語系化範本資料夾名稱（如 `範本`），因 `Templates` 資料夾建立後可能被重新命名。
+- 若仍有殘留，可改用 `--clear-files all`（會清空整個 home，請謹慎）。
 
 流程：產生 `batch_config.json` → `docker cp` 腳本與設定 → `docker exec php batch_provision.php`。
 
@@ -282,7 +336,16 @@ assert meta.get("statuscode") in (100, 200), meta
 docker exec -u www-data <容器> php /tmp/batch_provision.php /tmp/batch_config.json
 ```
 
-`config.json` 欄位：`users`, `clear_files`, `skeleton_names`, `set_quota`, `prefs`, `dry_run`。
+`config.json` 欄位：`users`, `clear_files`, `skeleton_names`, `set_quota`, `user_settings`, `dry_run`。
+
+`user_settings` 範例（Q2 預設值）：
+
+```json
+{
+  "recommendations": { "enabled": "0" },
+  "text": { "workspace_enabled": "0" }
+}
+```
 
 ### `set_user_quota.py`（僅設 quota，OCS 併發）
 
@@ -302,14 +365,14 @@ python set_user_quota.py --users uid1,uid2 --concurrency 20
 | `--concurrency` | 併發數，預設 `20` |
 | `--dry-run` | 預覽 |
 
-### `set_files_settings_docker.sh`（少量帳號）
+### `set_files_settings_docker.sh`（少量帳號，僅 Q2）
 
-逐筆 `occ user:setting`，**不建議 1 萬筆**（每次 bootstrap PHP）。
+逐筆 `occ user:setting`，**不建議 1 萬筆**（每次 bootstrap PHP）。固定取消兩個勾選：
 
 ```bash
 ./set_files_settings_docker.sh --inspect <uid>
-./set_files_settings_docker.sh --keys "folder_tree show_mime_column" --value 0 --dry-run
-./set_files_settings_docker.sh --keys "folder_tree show_mime_column" --value 0 -y
+./set_files_settings_docker.sh --dry-run
+./set_files_settings_docker.sh -y
 ```
 
 ### `gen_external_storage.py` / `create_external_storage.py`
@@ -327,7 +390,7 @@ python set_user_quota.py --users uid1,uid2 --concurrency 20
 
 | 方式 | 預估耗時 | 適用 |
 |------|----------|------|
-| `run_batch_provision.py` + `batch_provision.php` | 數秒～數分鐘 | 清檔 + quota + prefs |
+| `run_batch_provision.py` + `batch_provision.php` | 數秒～數分鐘 | 清檔 + quota + 取消兩個勾選 |
 | `set_user_quota.py`（併發 20） | 約 1～3 分鐘 | 僅 quota |
 | `set_files_settings_docker.sh`（occ 逐筆） | 數小時 | ❌ 不建議大量 |
 
@@ -339,7 +402,7 @@ python set_user_quota.py --users uid1,uid2 --concurrency 20
 2. **清檔**：預設 `skeleton` 只刪白名單；`--clear-files all` 會清空整個 home，請謹慎。
 3. **垃圾桶**：刪除的檔案預設進垃圾桶；要釋放空間請加 `--cleanup-trash` 或手動 `occ trashbin:cleanup`。
 4. **Quota=0**：主要阻擋佔空間的寫入；空資料夾理論上仍可能建立。若要硬擋所有寫入，需另裝 **Files Access Control** app（非本目錄工具）。
-5. **Q2 API 限制**：OCS Preferences API 無法由 admin 代設他人 `files` 偏好；大量請用 `run_batch_provision.py`。
+5. **Q2 API 限制**：OCS Preferences API 無法由 admin 代設他人 `recommendations` / `text` 偏好；大量請用 `run_batch_provision.py`。
 6. **建立新帳號**：管理介面或 **Provisioning API** 建立時設 **容量限額 = 0 B**，並搭配步驟 0 關閉 skeleton；詳見上文〈新建帳號時直接設定 quota=0 B〉。
 
 ---
@@ -348,11 +411,12 @@ python set_user_quota.py --users uid1,uid2 --concurrency 20
 
 | 現象 | 處理 |
 |------|------|
+| `Permission denied` 讀取 `/tmp/batch_config.json` | `docker cp` 後檔案為 root 擁有；`run_batch_provision.py` 已自動 `chown www-data`（請更新到最新版） |
 | 找不到容器 | `docker ps`，用 `-c <容器名>` |
 | `batch_provision.php` 找不到 base.php | `--base` 或容器內 `NC_BASE` 環境變數 |
 | `--all` 失敗 | 確認 `ENV_NEXTCLOUD_*` 與管理員權限 |
 | 清檔後仍顯示已用空間 | 加 `--cleanup-trash` 或手動清垃圾桶 |
-| 不確定「其他設定」的 key | `occ user:setting <uid> files` 對照 UI 勾選前後差異 |
+| 不確定「其他設定」目前狀態 | `occ user:setting <uid> recommendations` 與 `occ user:setting <uid> text` |
 
 ---
 
@@ -360,7 +424,8 @@ python set_user_quota.py --users uid1,uid2 --concurrency 20
 
 - Quota 僅 home：`lib/private/Files/SetupManager.php`
 - Skeleton 複製：`lib/private/User/Session.php`、`lib/private/legacy/OC_Util.php::copySkeleton`
-- Files 偏好 key：`apps/files/lib/Service/UserConfig.php`
+- Files 偏好 key（General 等區塊）：`apps/files/lib/Service/UserConfig.php`
+- Q2「其他設定」兩個勾選：`recommendations/enabled`、`text/workspace_enabled`（外部 app 註冊）
 - OCS 設 quota：`apps/provisioning_api` → `PUT /ocs/v2.php/cloud/users/{uid}`
 
 API 範例可參考專案根目錄 `ref/api-nextcloud.http`。
