@@ -1,6 +1,25 @@
 # Nextcloud 管理工具 (tools/)
 
-本目錄提供 Nextcloud 與 MinIO 外部儲存、帳號配額、Files 偏好設定的批次管理腳本。適用 **Docker** 環境；**不含 k8s 專用腳本**（k8s 請參考 `import_external_storage_k8s.sh` 自行調整）。
+本目錄提供 Nextcloud 與 MinIO 外部儲存、帳號配額、Files 偏好設定的批次管理腳本。
+
+- **執行環境**：`run_batch_provision.py`、`set_user_quota.py` 支援 **Docker** 與 **Kubernetes**（`--runtime docker|k8s`）
+- **Python 套件管理**：[uv](https://docs.astral.sh/uv/)（`pyproject.toml`）
+- **預設排除 `admin`**：`--all` 時自動跳過管理員帳號
+- **ENV 可選**：無 `ENV_NEXTCLOUD_*` 時，可透過容器內 `occ` 取得使用者列表與設定 quota
+
+**快速開始（單一帳號測試 Q3）**：
+
+```bash
+cd tools
+uv sync
+uv run python run_batch_provision.py --users 00059094 -c <容器> --apply --cleanup-trash
+```
+
+**快速開始（全部帳號，排除 admin）**：
+
+```bash
+uv run python run_batch_provision.py --all -c <容器> --apply --cleanup-trash
+```
 
 ---
 
@@ -9,10 +28,11 @@
 | 檔案 | 類型 | 用途 |
 |------|------|------|
 | `tools_external_storage.py` | Python 模組 | 外部儲存 API、MinIO 設定、logger 共用 |
-| `tools_user_admin.py` | Python 模組 | OCS 使用者列表（分頁）、設定 quota |
+| `tools_user_admin.py` | Python 模組 | OCS 使用者列表（分頁）、OCS/occ 設定 quota |
+| `tools_runtime.py` | Python 模組 | Docker / K8s 執行環境抽象（cp、exec、chown） |
 | `gen_external_storage.py` | Python | 從 CSV 產生 `mounts.json` |
 | `create_external_storage.py` | Python | 依 `mounts.json` 透過 API 建立外部儲存 |
-| `set_user_quota.py` | Python | 批次設定 quota（OCS 併發，適合大量帳號） |
+| `set_user_quota.py` | Python | 批次設定 quota（OCS 併發或 occ，預設排除 admin） |
 | `run_batch_provision.py` | Python | **主流程**：清 skeleton、設 quota、設 Files 偏好（驅動 PHP） |
 | `batch_provision.php` | PHP | 單次 bootstrap 批次處理（在容器內執行） |
 | `set_files_settings_docker.sh` | Bash | 少量帳號用 `occ` 設 Files 偏好（不建議 1 萬筆） |
@@ -39,7 +59,17 @@
 | `ENV_MINIO_SECRET_KEY` | S3 Secret Key |
 | `ENV_REGION` | S3 Region（預設 `us-east-1`） |
 
-Python 腳本請在 **`tools/` 目錄**下執行，或確保 `PYTHONPATH` 能 import 到 `tools_external_storage`、`tools_user_admin`。
+**哪些腳本需要 `ENV_NEXTCLOUD_*`？**
+
+| 腳本 | 是否必須 ENV |
+|------|----------------|
+| `create_external_storage.py` | ✅ 必須 |
+| `gen_external_storage.py`（部分流程） | ✅ 視參數而定 |
+| `run_batch_provision.py --all` | ❌ 可選（無 ENV 時用 `occ user:list`） |
+| `set_user_quota.py`（全部帳號） | ❌ 可選（無 ENV 時用 `occ`；有 ENV 時 OCS 併發較快） |
+| `run_batch_provision.py --users` | ❌ 不需要 |
+
+Python 腳本請在 **`tools/` 目錄**下執行，並以 **`uv run python`** 執行。
 
 ### Python 環境（uv）
 
@@ -96,6 +126,78 @@ Python 版本由 `.python-version` 指定（預設 3.12）；uv 會自動下載�
 - **Quota**：只包在 `HomeMountPoint` 上；`quota_include_external_storage` 預設 `false`，故 **quota=0 不影響 MinIO 掛載**。
 - **Skeleton**：新帳號建立時會從 `core/skeleton` 複製示範檔；若建立時已是 quota=0，複製常因空間不足被靜默略過（home 為空）。
 - **大量帳號（約 1 萬）**：避免 bash 迴圈逐筆 `occ`（每次完整 bootstrap PHP）。**清檔必須用 PHP 檔案 API**；**設 quota 可用 OCS 併發**；**清檔 + quota + 其他設定 合併** 用 `batch_provision.php` 只 bootstrap 一次。
+- **`--all` 預設排除 `admin`**；要包含 admin 請加 `--no-exclude`。
+
+---
+
+## 執行環境與效能：OCS / occ / batch_provision
+
+本目錄有三種與 Nextcloud 互動的方式，效能差異極大：
+
+```mermaid
+flowchart TB
+    subgraph fast [大量帳號推薦]
+        A[batch_provision.php<br/>bootstrap 1 次 + 內部迴圈]
+        B[OCS HTTP API<br/>併發請求]
+    end
+    subgraph slow [小量或無 ENV]
+        C[occ 逐筆 docker/kubectl exec<br/>每次 bootstrap 1 次]
+    end
+```
+
+### 什麼是 bootstrap？
+
+執行 `php occ ...` 或 `php batch_provision.php` 時，Nextcloud 會先完整初始化：
+
+1. 載入 `lib/base.php`、`config.php`
+2. 連線資料庫、載入 apps、DI 容器
+3. 初始化檔案系統等子系統
+4. 才執行實際指令（設 quota、刪檔等）
+
+單次 occ 通常需 **0.5～2 秒**，其中絕大部分花在啟動，而非寫入那一筆設定。
+
+### 三種方式對照
+
+| 方式 | 機制 | 1 萬使用者 bootstrap 次數 | 粗估耗時 | 需要 ENV |
+|------|------|---------------------------|----------|----------|
+| **`batch_provision.php`** | `docker/kubectl exec` **一次**，PHP 內迴圈 | **1 次** | 數秒～數分 | ❌ |
+| **OCS API** | HTTP `PUT /ocs/v2.php/cloud/users/{uid}`，可併發 | Web worker 處理 | 約 1～3 分 | ✅ |
+| **occ 逐筆** | 每位使用者一次 `docker exec php occ ...` | **~N 次** | 數小時（N≈1萬） | ❌ |
+
+### 為何 `set_user_quota.py` occ 模式不併發？
+
+`occ` 模式下每次設定都會：
+
+```bash
+docker exec -u www-data <容器> php occ user:setting <uid> files quota 0
+```
+
+這會啟動**全新的 PHP CLI 行程**，完整 bootstrap 後才寫入 `oc_preferences`，然後結束。
+
+若同時並行 20 個 `docker exec occ`：
+
+- 容器 CPU / 記憶體被 20 份 Nextcloud 搶占
+- 資料庫連線與 lock 競爭加劇
+- 很少線性加速，反而容易 OOM 或逾時
+
+因此 `set_user_quota.py` 在 occ 模式**固定循序執行**（`concurrency=1`）。人數少（幾十～幾百）可接受；**1 萬筆請設 ENV 走 OCS**，或改用 `run_batch_provision.py --all`。
+
+### 工具選擇建議
+
+| 情境 | 建議工具 |
+|------|----------|
+| 清 skeleton + quota + 取消兩個勾選（大量） | `run_batch_provision.py --all` |
+| 只改 quota（有 ENV，大量） | `set_user_quota.py`（OCS 併發） |
+| 只改 quota（無 ENV，少量） | `set_user_quota.py -c <容器>`（occ 循序） |
+| 只取消兩個勾選（少量） | `set_files_settings_docker.sh` |
+| 建立 MinIO 掛載 | `create_external_storage.py` |
+
+### 自行驗證 bootstrap 耗時
+
+```bash
+time docker exec -u www-data chad-nextcloud-1 php occ user:info admin
+# 連續執行 3 次 ≈ 3 倍時間 → 即為「每次 occ 都要付的啟動成本」
+```
 
 ---
 
@@ -122,11 +224,11 @@ docker exec -u www-data <容器> php occ config:system:set templatedirectory --v
 cd tools
 
 # 從 CSV 產生 mounts.json
-python gen_external_storage.py --csv ../import/import-accounts.csv --output import/mounts.json
+uv run python gen_external_storage.py --csv ../import/import-accounts.csv --output import/mounts.json
 
 # 方式 A：透過 HTTP API 建立（需 ENV_NEXTCLOUD_*）
-python create_external_storage.py --mounts-file import/mounts.json --dry-run
-python create_external_storage.py --mounts-file import/mounts.json
+uv run python create_external_storage.py --mounts-file import/mounts.json --dry-run
+uv run python create_external_storage.py --mounts-file import/mounts.json
 
 # 方式 B：透過 occ 匯入
 ./import_external_storage_docker.sh import/mounts.json
@@ -148,40 +250,53 @@ docker exec -u www-data <容器> php occ user:setting <某帳號> recommendation
 docker exec -u www-data <容器> php occ user:setting <某帳號> text
 ```
 
-**乾跑（預設，不變更；預設會取消兩個勾選）**：
+**乾跑（預設，不變更；預設取消兩個勾選、排除 admin）**：
 
 ```bash
-python run_batch_provision.py --all
+# 無 ENV 也可（自動 occ user:list）
+uv run python run_batch_provision.py --all -c chad-nextcloud-1
 ```
 
 **正式執行**：
 
 ```bash
-python run_batch_provision.py --all --apply --cleanup-trash
+uv run python run_batch_provision.py --all -c chad-nextcloud-1 --apply --cleanup-trash
 ```
 
-**只處理指定帳號**：
+**只處理指定帳號**（不受 `--exclude` 影響）：
 
 ```bash
-python run_batch_provision.py --users minio-DEPT_A,minio-DEPT_B --apply
+uv run python run_batch_provision.py --users 00059094 -c chad-nextcloud-1 --apply --cleanup-trash
 ```
 
 **跳過 Q2（不取消兩個勾選）**：
 
 ```bash
-python run_batch_provision.py --all --apply --skip-additional-settings
+uv run python run_batch_provision.py --all -c chad-nextcloud-1 --apply --skip-additional-settings
+```
+
+**也要處理 admin**：
+
+```bash
+uv run python run_batch_provision.py --all -c chad-nextcloud-1 --apply --no-exclude
 ```
 
 **從檔案讀取帳號清單**（每行一個 uid）：
 
 ```bash
-python run_batch_provision.py --users-file users.txt --apply
+uv run python run_batch_provision.py --users-file users.txt -c chad-nextcloud-1 --apply
+```
+
+**Kubernetes**：
+
+```bash
+uv run python run_batch_provision.py --runtime k8s -n nextcloud -p nextcloud-0 --all --apply
 ```
 
 容器內 PHP 路徑若非預設，可指定：
 
 ```bash
-python run_batch_provision.py --all --apply --base /var/www/html/lib/base.php
+uv run python run_batch_provision.py --all -c chad-nextcloud-1 --apply --base /var/www/html/lib/base.php
 ```
 
 ---
@@ -307,9 +422,29 @@ assert meta.get("statuscode") in (100, 200), meta
 
 ### `run_batch_provision.py`（大量帳號主流程）
 
+支援 **Docker** 與 **Kubernetes**（`--runtime docker|k8s`），遠端執行的 `batch_provision.php` 邏輯相同。
+
+**Docker（預設）**
+
+```bash
+uv run python run_batch_provision.py --users 00059094 -c chad-nextcloud-1 --apply --cleanup-trash
+```
+
+**Kubernetes**
+
+```bash
+uv run python run_batch_provision.py \
+  --runtime k8s -n nextcloud -p nextcloud-0 \
+  --users 00059094 --apply --cleanup-trash
+```
+
 | 參數 | 說明 |
 |------|------|
-| `--all` | 透過 OCS 分頁取得所有使用者 |
+| `--runtime` | `docker`（預設）或 `k8s` |
+| `--all` | 處理所有使用者（`auto`：有 ENV 用 OCS，否則 `occ user:list`） |
+| `--user-source` | `auto`（預設）/ `ocs` / `occ` |
+| `--exclude` | `--all` 時排除帳號（預設 `admin`） |
+| `--no-exclude` | `--all` 時不排除任何帳號 |
 | `--users` | 逗號分隔的帳號列表 |
 | `--users-file` | 每行一個帳號的檔案 |
 | `--clear-files` | `skeleton`（預設，只刪白名單）/ `all` / `none` |
@@ -318,7 +453,10 @@ assert meta.get("statuscode") in (100, 200), meta
 | `--skip-additional-settings` | 跳過 Q2（不取消「其他設定」兩個勾選） |
 | `--apply` | **必須加上才會實際執行**（否則為乾跑） |
 | `--cleanup-trash` | 完成後執行 `occ trashbin:cleanup` |
-| `-c, --container` | Docker 容器名稱（預設自動偵測名稱含 `nextcloud`） |
+| `-c, --container` | **[docker]** 容器名稱（預設自動偵測名稱含 `nextcloud`） |
+| `-n, --namespace` | **[k8s]** 命名空間（預設 `default`） |
+| `-p, --pod` | **[k8s]** Pod 名稱（預設依 label 自動偵測） |
+| `--label-selector` | **[k8s]** 自動偵測 Pod 的 label（預設 `app=nextcloud`） |
 
 **Skeleton 清單**（`--clear-files skeleton`）：
 
@@ -326,14 +464,18 @@ assert meta.get("statuscode") in (100, 200), meta
 - 另納入語系化範本資料夾名稱（如 `範本`），因 `Templates` 資料夾建立後可能被重新命名。
 - 若仍有殘留，可改用 `--clear-files all`（會清空整個 home，請謹慎）。
 
-流程：產生 `batch_config.json` → `docker cp` 腳本與設定 → `docker exec php batch_provision.php`。
+流程：產生 `batch_config.json` → 複製腳本與設定（`docker cp` 或 `kubectl cp`）→ 遠端執行 `php batch_provision.php`。
 
 ### `batch_provision.php`（容器內執行）
 
 通常由 `run_batch_provision.py` 呼叫，勿手動執行除非除錯：
 
 ```bash
+# Docker
 docker exec -u www-data <容器> php /tmp/batch_provision.php /tmp/batch_config.json
+
+# Kubernetes
+kubectl exec -n <ns> <pod> -u www-data -- php /tmp/batch_provision.php /tmp/batch_config.json
 ```
 
 `config.json` 欄位：`users`, `clear_files`, `skeleton_names`, `set_quota`, `user_settings`, `dry_run`。
@@ -347,22 +489,35 @@ docker exec -u www-data <容器> php /tmp/batch_provision.php /tmp/batch_config.
 }
 ```
 
-### `set_user_quota.py`（僅設 quota，OCS 併發）
+### `set_user_quota.py`（僅設 quota）
 
 適合帳號 home **已是空的**、只需改 quota 時（比跑完整 PHP 批次更輕）。
 
 ```bash
-python set_user_quota.py --dry-run
-python set_user_quota.py --quota 0 --exclude admin
-python set_user_quota.py --users uid1,uid2 --concurrency 20
+# 無 ENV，Docker + occ（預設排除 admin）
+uv run python set_user_quota.py --dry-run -c chad-nextcloud-1
+
+# 有 ENV 時自動用 OCS 併發（大量帳號較快）
+uv run python set_user_quota.py --dry-run
+
+# 指定帳號（不受 exclude 影響）
+uv run python set_user_quota.py --users uid1,uid2 -c chad-nextcloud-1
+
+# Kubernetes（occ 模式）
+uv run python set_user_quota.py --runtime k8s -n nextcloud -p nextcloud-0 --dry-run
 ```
 
 | 參數 | 說明 |
 |------|------|
+| `--runtime` | `docker`（預設）或 `k8s` |
 | `--quota` | 預設 `0` |
-| `--users` | 指定帳號；未指定則全部（OCS 分頁） |
-| `--exclude` | 排除帳號，例如 `admin` |
-| `--concurrency` | 併發數，預設 `20` |
+| `--users` | 指定帳號；未指定則全部 |
+| `--exclude` | 預設 `admin`（僅在未指定 `--users` 時） |
+| `--no-exclude` | 不排除任何帳號 |
+| `--user-source` | `auto` / `ocs` / `occ`（使用者列表） |
+| `--quota-backend` | `auto` / `ocs` / `occ`（設定 quota；auto 有 ENV 用 OCS） |
+| `-c` / `-n` / `-p` | Docker 容器或 K8s 命名空間 / Pod |
+| `--concurrency` | OCS 併發數，預設 `20`；**occ 模式固定循序（見上文）** |
 | `--dry-run` | 預覽 |
 
 ### `set_files_settings_docker.sh`（少量帳號，僅 Q2）
@@ -388,11 +543,15 @@ python set_user_quota.py --users uid1,uid2 --concurrency 20
 
 ## 效能參考（約 1 萬使用者）
 
-| 方式 | 預估耗時 | 適用 |
-|------|----------|------|
-| `run_batch_provision.py` + `batch_provision.php` | 數秒～數分鐘 | 清檔 + quota + 取消兩個勾選 |
-| `set_user_quota.py`（併發 20） | 約 1～3 分鐘 | 僅 quota |
-| `set_files_settings_docker.sh`（occ 逐筆） | 數小時 | ❌ 不建議大量 |
+| 方式 | bootstrap 次數 | 預估耗時 | 適用 |
+|------|----------------|----------|------|
+| `run_batch_provision.py` + `batch_provision.php` | **1 次** | 數秒～數分鐘 | 清檔 + quota + 取消兩個勾選 ✅ |
+| `set_user_quota.py`（OCS，併發 20） | Web worker | 約 1～3 分鐘 | 僅 quota ✅ |
+| `set_user_quota.py`（occ 循序） | **~N 次** | 數小時 | 僅 quota，無 ENV ❌ |
+| `set_files_settings_docker.sh`（occ 逐筆） | **~N 次** | 數小時 | 僅 Q2 ❌ |
+| bash 迴圈 `occ user:setting` | **~N 次** | 數小時 | ❌ 請改用上方工具 |
+
+> N = 使用者數。單次 occ bootstrap 約 0.5～2 秒時，1 萬人粗估 **1.4～5.5 小時**（僅供量級參考）。
 
 ---
 
@@ -414,7 +573,9 @@ python set_user_quota.py --users uid1,uid2 --concurrency 20
 | `Permission denied` 讀取 `/tmp/batch_config.json` | `docker cp` 後檔案為 root 擁有；`run_batch_provision.py` 已自動 `chown www-data`（請更新到最新版） |
 | 找不到容器 | `docker ps`，用 `-c <容器名>` |
 | `batch_provision.php` 找不到 base.php | `--base` 或容器內 `NC_BASE` 環境變數 |
-| `--all` 失敗 | 確認 `ENV_NEXTCLOUD_*` 與管理員權限 |
+| `--all` 需要 ENV？ | 不需要；無 ENV 時自動 `occ user:list`（需 `-c` 或 `-p`） |
+| `set_user_quota` 很慢 | 無 ENV 走 occ 循序；大量請設 ENV 或改用 `run_batch_provision.py` |
+| skeleton 殘留 `Templates credits.md` | 更新 `batch_provision.php` 後重跑；或 `--clear-files all`（謹慎） |
 | 清檔後仍顯示已用空間 | 加 `--cleanup-trash` 或手動清垃圾桶 |
 | 不確定「其他設定」目前狀態 | `occ user:setting <uid> recommendations` 與 `occ user:setting <uid> text` |
 

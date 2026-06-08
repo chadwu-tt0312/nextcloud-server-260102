@@ -79,3 +79,48 @@ quota: 0 B
 執行 occ trashbin:cleanup...
 Remove deleted files of   00059094
 === 執行記錄結束: 2026-06-05T17:21:40.104877 ===
+❌ --all 需要環境變數 ENV_NEXTCLOUD_URL / USER / PASSWORD
+=== 執行記錄開始: 2026-06-08T14:05:17.370026 ===
+模式: DRY-RUN（乾跑）
+runtime: docker
+目標: chad-nextcloud-1
+使用者來源: occ user:list（未設定 ENV_NEXTCLOUD_*，改用容器內 occ）
+透過 occ 取得 4 位使用者
+目標帳號數: 4
+清檔模式: skeleton
+quota: 0 B
+其他設定: {'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
+============================================================
+複製腳本與設定到遠端...
+已設定遠端檔案權限（owner=www-data）: /tmp/batch_provision.php, /tmp/batch_config.json
+執行 batch_provision.php...
+✓ 00059094 | 刪除 0 項 | quota=0 B | user_settings=None
+✓ admin | 刪除 9 項 | quota=0 B | user_settings=None | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates', 'Templates credits.md']
+✓ chad | 刪除 0 項 | quota=0 B | user_settings=None
+✓ usr01 | 刪除 0 項 | quota=0 B | user_settings=None
+============================================================
+✅ 完成：{'total': 4, 'ok': 4, 'failed': 0, 'deleted_files': 9, 'elapsed_sec': 0.06, 'dry_run': True, 'skeleton_names_count': 15, 'skeleton_names_sample': ['Documents', 'Photos', 'Templates', 'Templates credits.md', 'Nextcloud.png', 'Nextcloud intro.mp4', 'Nextcloud Manual.pdf', 'Reasons to use Nextcloud.pdf', 'Readme.md', 'welcome.txt', '範本', '模板', 'Vorlagen', 'Modèles', 'テンプレート']}
+ℹ️  這是乾跑模式，未實際變更。加上 --apply 才會執行。
+=== 執行記錄結束: 2026-06-08T14:05:18.802385 ===
+=== 執行記錄開始: 2026-06-08T14:08:05.714194 ===
+模式: DRY-RUN（乾跑）
+runtime: docker
+目標: chad-nextcloud-1
+使用者來源: occ user:list（未設定 ENV_NEXTCLOUD_*，改用容器內 occ）
+透過 occ 取得 4 位使用者
+排除 1 位: ['admin']
+目標帳號數: 3
+清檔模式: skeleton
+quota: 0 B
+其他設定: {'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
+============================================================
+複製腳本與設定到遠端...
+已設定遠端檔案權限（owner=www-data）: /tmp/batch_provision.php, /tmp/batch_config.json
+執行 batch_provision.php...
+✓ 00059094 | 刪除 0 項 | quota=0 B | user_settings=None
+✓ chad | 刪除 0 項 | quota=0 B | user_settings=None
+✓ usr01 | 刪除 0 項 | quota=0 B | user_settings=None
+============================================================
+✅ 完成：{'total': 3, 'ok': 3, 'failed': 0, 'deleted_files': 0, 'elapsed_sec': 0.06, 'dry_run': True, 'skeleton_names_count': 15, 'skeleton_names_sample': ['Documents', 'Photos', 'Templates', 'Templates credits.md', 'Nextcloud.png', 'Nextcloud intro.mp4', 'Nextcloud Manual.pdf', 'Reasons to use Nextcloud.pdf', 'Readme.md', 'welcome.txt', '範本', '模板', 'Vorlagen', 'Modèles', 'テンプレート']}
+ℹ️  這是乾跑模式，未實際變更。加上 --apply 才會執行。
+=== 執行記錄結束: 2026-06-08T14:08:07.366349 ===

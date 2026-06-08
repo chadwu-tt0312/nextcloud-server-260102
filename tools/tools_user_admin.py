@@ -16,12 +16,15 @@ Nextcloud 使用者管理工具共用模組
 """
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 # 重複使用 external storage 模組的 logger 與設定讀取，維持一致性
 from tools_external_storage import _default_logger
+
+if TYPE_CHECKING:
+    from tools_runtime import NextcloudRuntime
 
 # OCS Provisioning API 共用標頭
 _OCS_HEADERS = {
@@ -176,3 +179,34 @@ def set_user_quota(
         error_msg = f"設定 quota 時發生錯誤: {e}"
         logger.error(error_msg)
         return False, error_msg
+
+
+def set_user_quota_occ(
+    runtime: "NextcloudRuntime",
+    user_id: str,
+    quota: str = "0",
+    dry_run: bool = False,
+    logger: logging.Logger | None = None,
+) -> tuple[bool, str]:
+    """
+    透過 occ user:setting 設定單一使用者的 quota（不需 OCS 環境變數）
+
+    寫入 oc_preferences（app=files, key=quota），與 OCS setQuota 相同欄位。
+    """
+    logger = logger or _default_logger()
+
+    if dry_run:
+        return True, f"DRY RUN: occ user:setting {user_id} files quota {quota}"
+
+    proc = runtime.exec_run_user(
+        ["php", "occ", "user:setting", user_id, "files", "quota", quota],
+    )
+    if proc.returncode == 0:
+        return True, f"成功設定 quota = {quota}"
+    err = (proc.stderr or proc.stdout or "occ user:setting 失敗").strip()
+    logger.error(err)
+    return False, err
+
+
+def ocs_configured(config: dict[str, str]) -> bool:
+    return bool(config.get("url") and config.get("username") and config.get("password"))
