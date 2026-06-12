@@ -1,0 +1,41 @@
+=== 執行記錄開始: 2026-06-09T13:34:44.616521 ===
+模式: DRY-RUN（乾跑）
+runtime: k8s
+目標: nextcloud/nextcloud-5659bc4574-fdwnl
+使用者來源: OCS API（已設定 ENV_NEXTCLOUD_*）
+呼叫 OCS API 取得使用者列表 (offset=0, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=1000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=1500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=2000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=2500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=3000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=3500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=4000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=4500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=5000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=5500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=6000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=6500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=7000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=7500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=8000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=8500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=9000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=9500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=10000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=10500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=11000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=11500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=12000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=12500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=13000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=13500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=14000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=14500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=15000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=15500, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=16000, limit=500)
+呼叫 OCS API 取得使用者列表 (offset=16500, limit=500)
+API 請求逾時: http://10.11.233.189:30805/ocs/v2.php/cloud/users
+❌ 無法取得使用者列表: API 請求逾時: http://10.11.233.189:30805/ocs/v2.php/cloud/users

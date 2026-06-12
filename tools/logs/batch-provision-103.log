@@ -1,5 +1,5 @@
-=== 執行記錄開始: 2026-06-09T14:07:21.315545 ===
-模式: APPLY（實際執行）
+=== 執行記錄開始: 2026-06-09T13:50:51.559752 ===
+模式: DRY-RUN（乾跑）
 runtime: k8s
 目標: nextcloud/nextcloud-5659bc4574-fdwnl
 使用者來源: OCS API（已設定 ENV_NEXTCLOUD_*）
@@ -152,7 +152,7 @@ quota: 0 B
 ✓ 3AECD169-7DE3-4A59-B2F4-BDDFAA127ACF | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 3AF32861-E0F0-4734-A3A6-9D90705DDE4A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 3B01E615-A986-4FAE-B38E-EA5B128FD966 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 3B210925-A6F7-4EED-A7A5-6E57C310FB41 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00034584']
+✓ 3B210925-A6F7-4EED-A7A5-6E57C310FB41 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00034584']
 ✓ 3B32C2A1-F96A-4615-9263-4CA6FC1BB85C | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 3B69D03F-34A1-4553-B0E3-205C4396C8EE | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 3D091B33-5E13-4ABB-8D29-16EC5891E7C8 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -390,7 +390,7 @@ quota: 0 B
 ✓ AA6C48FD-B42D-4315-8D06-F906CF471E8D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ ACC9B454-2014-4DDD-8D0B-DB7B00D15E6C | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ ACE4D6B6-16FC-463D-AC3A-8988289AAAC3 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ AD488ADD-68C4-4103-B737-0689BC27DA21 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
+✓ AD488ADD-68C4-4103-B737-0689BC27DA21 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本']
 ✓ ADEF0329-4B6B-45FA-A148-2C704EBD32AE | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ AE0B723C-E3D4-4469-A37E-806991F5D263 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ AFACABAC-1FC0-4910-841B-33679B0AF05F | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -1015,7 +1015,7 @@ quota: 0 B
 ✓ F11A2928-FC32-485C-B1E2-C31B961669CA | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ F120457A-39FF-4233-AAE8-EBF3502D35CD | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ F15A81CC-E84A-44C7-B0B0-E3E783EE6D14 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ F1E924C7-A110-4C61-A558-06201DAB4C15 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00055265']
+✓ F1E924C7-A110-4C61-A558-06201DAB4C15 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates', 'Templates credits.md', 'minio-00055265']
 ✓ F273D81C-2FE3-45E4-A58E-C9420D27B61C | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ F3584A2F-2578-430C-A843-60EDA2263364 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ F3608A9C-0FA9-485E-8FBB-DEAA4A00220D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -1481,7 +1481,7 @@ quota: 0 B
 ✓ DAFBFB78-000F-4685-A236-72FA27E4106D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ DB5F59ED-E189-4D69-8BF6-474645A774E3 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ DBAA303A-3F14-4E89-B9C0-38718A568510 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ DBAC8D1D-D219-46EF-B0BD-EAA4B1CC8415 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
+✓ DBAC8D1D-D219-46EF-B0BD-EAA4B1CC8415 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本']
 ✓ DBC2A712-CD60-4BB7-B89C-8F8BE5CAF85E | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ DBC89DCD-2F3F-46C6-B936-32FACA326371 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ DC604B60-3024-464C-A7DD-7A8FDCA29727 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -1697,7 +1697,7 @@ quota: 0 B
 ✓ 4A2072D5-C0F2-4601-9051-3281D57E6D93 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 4A493C3D-43DE-4D26-B3CD-3E50798D5694 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 4ACD384F-3D80-4A8D-8B21-C7976D1CFB93 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 4B03B0FC-92E1-4FA6-BC19-0C7EA3262AC3 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00044951']
+✓ 4B03B0FC-92E1-4FA6-BC19-0C7EA3262AC3 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates', 'Templates credits.md', 'minio-00044951']
 ✓ 4BDDC866-7AEF-4649-AE0A-23B94C4029D9 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 4BF202CA-6705-47C3-8786-E8DEC107714D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 4C7485C9-BFFB-4754-80F4-2EC6CC5D23F7 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -2793,7 +2793,7 @@ quota: 0 B
 ✓ 8127DBFE-0D6A-4DC5-A6B9-E6DABD3747E0 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8174A6CB-86B1-42E2-9D8D-444C19B9A320 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 829C65C1-E036-4E0D-A00E-DD2100664C41 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 8321FBA9-F400-407D-8EDB-5F3082F63B9C | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00049901']
+✓ 8321FBA9-F400-407D-8EDB-5F3082F63B9C | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00049901']
 ✓ 835DE4F5-2C3E-46FB-AE97-BD7D0A4A8EDE | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 83DFAE8C-21C2-46A7-B02C-A03B498CD4AF | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 841EE798-38C7-40BB-9CFF-ED6CD2631D5E | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -4151,7 +4151,7 @@ quota: 0 B
 ✓ 343BAF15-DDE5-46BE-8A47-31C2CC3C7318 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 350B91C8-E0BC-42D3-AF92-F6CDF212F508 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 350E7DB9-553B-492E-BC9A-507D2CC0C11F | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-❌ 3536F604-FF6B-4B26-AA6B-BC5AF052E261: ['delete 範本: "/3536F604-FF6B-4B26-AA6B-BC5AF052E261/files/範本" is locked']
+✓ 3536F604-FF6B-4B26-AA6B-BC5AF052E261 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本']
 ✓ 35989076-0D38-405F-8512-D9B2CA6ABD0A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 35D09D10-2D8F-43B6-B1E6-8269221EAE6A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 36438583-CBD8-4597-B7C8-68DD725B85A6 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -4973,7 +4973,7 @@ quota: 0 B
 ✓ DDD58527-1C79-44E8-8BE1-A7CA0D55FD2D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ DE1DDE1B-5485-42A2-8DA9-1C1BDC9C643A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ DED20F29-4365-41D0-A079-4C4CB641853E | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ DF27111D-D9BC-40BC-8051-F126482B3C59 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00011478']
+✓ DF27111D-D9BC-40BC-8051-F126482B3C59 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00011478']
 ✓ DFA0833C-F98A-4A69-8AC9-DBFA9408096A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ DFAA9151-3E57-48E4-BC6C-F84636B99160 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ E031DF53-E132-4554-B0EB-91A68CDBB43D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -5354,7 +5354,7 @@ quota: 0 B
 ✓ A14ABF66-0A92-4067-B21F-587268D6006D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ A202789A-C860-454F-B6C9-AB0BFA851DDC | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ A20F0F60-43B4-418B-B71C-4649BD5AD3A9 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ A2A39C96-9610-4DD8-9257-9985EB4D9774 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00046654']
+✓ A2A39C96-9610-4DD8-9257-9985EB4D9774 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates', 'Templates credits.md', 'minio-00046654']
 ✓ A3A5C25C-0F98-438B-88F6-2CEAF09BEE59 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ A4150B72-0EB4-4C0C-9758-618D6A61707A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ A43F077F-FE44-4C4B-B1F6-D36B1CA5CEF2 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -6299,7 +6299,7 @@ quota: 0 B
 ✓ 85BC3DEC-7358-4F77-8257-81BDF2C4F1F7 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 85DD02F1-9951-4E45-9017-CB87AF454A5D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 867CEC03-3FF0-4E52-B793-025ED8403637 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 86B7C5F4-5130-4CF5-9310-AF46F32E4410 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
+✓ 86B7C5F4-5130-4CF5-9310-AF46F32E4410 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本']
 ✓ 86D4FCE2-BEFB-4A56-9236-0A4FE90A5E5E | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8704A038-4166-4083-B512-8FC28DB7107E | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 871228F7-F17C-4F0D-AA92-B5EBB9DF8317 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -8989,7 +8989,7 @@ quota: 0 B
 ✓ E1372123-0D50-4AA2-A134-FE22B25EBD1A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ E1C7A521-F53B-48EA-A32F-F47F44C0217E | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ E1CEAB15-21F0-47C4-B48B-3D720EED04C7 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ E238BE13-7D61-4A9B-BD06-60D0A63AC99F | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00071445']
+✓ E238BE13-7D61-4A9B-BD06-60D0A63AC99F | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates', 'Templates credits.md', 'minio-00071445']
 ✓ E25F7DF8-D4EA-461F-8F9B-1C97B6938673 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ E413550F-9EA4-4509-95D4-5121E3162C28 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ E429F4E7-C2C7-4E25-8DB3-09F6CA3A419B | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -9334,7 +9334,7 @@ quota: 0 B
 ✓ 893CB794-C0A2-4025-937C-8AB2B2ECE9A3 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 897777AF-E752-4730-9AD4-343B5BFE5233 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8A09AF7B-F042-4B0E-8F77-49E72DF6EC59 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 8A2C0B57-7654-4EC6-9729-5EAE54A20A7B | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00048964']
+✓ 8A2C0B57-7654-4EC6-9729-5EAE54A20A7B | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00048964']
 ✓ 8C8DA457-B655-457A-84A4-68E3F2866BDD | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8CDB9589-F774-4457-9F64-E776E9B76C9E | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8D3DB275-A590-4B82-AE5F-47C024046519 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -9423,7 +9423,7 @@ quota: 0 B
 ✓ BBD835BF-D6BA-4E39-8449-03E46284A81F | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ BD6C9BA6-EDE3-4132-9FFA-E76FC9B0493A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ BDB86551-E658-4C79-8462-3832DF46BEBA | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ BDDEF9B9-43F2-4977-833F-9DDA8A1D2AFB | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
+✓ BDDEF9B9-43F2-4977-833F-9DDA8A1D2AFB | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本']
 ✓ BE22E195-373F-49D9-A9C1-5F7173E1F2A5 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ BE2468B8-BC1E-4498-8909-40791203542A | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ BE4BDE5E-743A-4359-BD93-835F968F360F | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -10709,7 +10709,7 @@ quota: 0 B
 ✓ 523A40CF-852C-44ED-AE1A-BB542A4C910D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 5272A7C9-BBB9-4773-95A7-E8137B4BE282 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 5282F0D0-8B0B-4F02-A7BE-4BAA40537D7B | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 528AC5E4-67B6-4ECB-9967-CA7D8FBDFD92 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
+✓ 528AC5E4-67B6-4ECB-9967-CA7D8FBDFD92 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本']
 ✓ 530FB6E0-DFCF-4E05-B7F1-BDFD54686695 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 53C1D2ED-8FA4-477F-88F1-49798A09F801 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 541096D8-D4DC-4BBF-B9D6-6FFBD42BD400 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -11162,7 +11162,7 @@ quota: 0 B
 ✓ 32CCCD51-DB29-4841-AD6A-3E3B4415E3C3 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 33082619-1E1E-42FC-BB27-5A6DDA3D870D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 3313495E-61BB-4C62-A74E-9766B27B62FD | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 33C16ACD-0AD1-422F-A8AB-F135E94A5A63 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00056965']
+✓ 33C16ACD-0AD1-422F-A8AB-F135E94A5A63 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00056965']
 ✓ 33DEA0C6-7576-4225-B19D-E1C5E4208B14 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 341AEEE0-EE81-44B7-9B56-F8114AC053D7 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 341D670E-2C72-4A59-9C7D-F79E14884E49 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -11941,7 +11941,7 @@ quota: 0 B
 ✓ C1F22066-2933-4101-944C-2FCE117D2FB8 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ C2C35278-4D94-489F-8D56-7939447F8773 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ C32C42BE-50FB-4109-8FCA-82FB83A84557 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ C357C4D5-2DED-4E0E-9872-C6AB8373373E | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00054021']
+✓ C357C4D5-2DED-4E0E-9872-C6AB8373373E | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00054021']
 ✓ C3D1AC90-66FE-47F3-8504-ADBC0D8713F3 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ C5E547C3-5B0E-4AFB-AC4D-630685CECACE | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ C74CAFB1-09F7-4E10-BEF4-234B50FEA166 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -14570,7 +14570,7 @@ quota: 0 B
 ✓ 0A84ADF8-43F4-4CB4-B694-FAD01BA358FD | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 0ABE6D52-8276-41EE-9D19-CA9CBA0E6969 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 0B3C5BA3-1898-4C9A-80F5-050E52A37E50 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 0B4BBE44-4CAB-491C-BE40-C292B22A482D | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00057143']
+✓ 0B4BBE44-4CAB-491C-BE40-C292B22A482D | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00057143']
 ✓ 0B9AF69A-8DF9-4A05-A483-9C192D34E1ED | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 0BFE2A04-AB30-4B08-A07A-7FB9D622D55F | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 0C6373AA-8515-44BF-95DE-E266FBA161D3 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -14717,7 +14717,7 @@ quota: 0 B
 ✓ 54584732-825D-40A8-AB81-14B595523244 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 556BCF39-A85F-492C-AF08-9797042A2B00 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 55ED1054-27ED-46FB-96D5-1F6D76496F76 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 56CFD8A1-0060-48A3-B2E0-D218A14FBB94 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00059048']
+✓ 56CFD8A1-0060-48A3-B2E0-D218A14FBB94 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00059048']
 ✓ 56DB5333-07DB-4396-9EE7-D8F4A1D39FD1 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 57264246-F82A-4852-AA34-BFE7169D05E3 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 576030F3-2475-468F-9154-7E0C9AE9253C | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -15309,7 +15309,7 @@ quota: 0 B
 ✓ 89CC7642-A1BD-4067-A6E2-4842289BBCB7 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8A77572D-D241-4D18-BAA2-4254B26F81EC | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8ACF9DFB-12AD-4563-9F34-0073F0E26D18 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 8B7B6B96-FDD5-4491-9E53-F7AFCA85DDDC | 刪除 8 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00059094']
+✓ 8B7B6B96-FDD5-4491-9E53-F7AFCA85DDDC | 刪除 8 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', '範本', 'minio-00059094']
 ✓ 8C704080-4BE0-41FB-9BA4-F4C33D16E463 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8DA2152F-77B6-4956-8127-CFC82BA097F9 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 8E775509-6C53-427A-8861-67C0F21E7BF0 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -15328,7 +15328,7 @@ quota: 0 B
 ✓ 93522EF7-9E6D-4C97-A90E-880CE6B2216F | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 935F06FB-3E43-4285-A50F-0842DF91BA59 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 9367DAF8-3C5D-44D8-B54A-C981BE670CE0 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ 939E4AA4-9CE4-4E0B-8C15-012A9FE14C42 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-Z1663']
+✓ 939E4AA4-9CE4-4E0B-8C15-012A9FE14C42 | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-Z1663']
 ✓ 93E35B31-49A6-416A-9FF8-10FEEF06B4FB | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 96F7C985-A632-4A63-B314-FE398ACED797 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ 96FF4209-0E2C-42B7-A59F-7185F3A78BA7 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -15956,7 +15956,7 @@ quota: 0 B
 ✓ CC297C86-9554-41D7-B735-23B6A3EA8240 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ CE2BFD5D-98A3-4DFC-AD48-3153B21A5317 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ CE362C42-774D-4E4F-924E-886A3AA5754E | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-✓ CE93753A-03E0-4366-824C-CBAB9D33B3AB | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['minio-00059197']
+✓ CE93753A-03E0-4366-824C-CBAB9D33B3AB | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本', 'minio-00059197']
 ✓ CEDE938B-78B2-460B-A3F9-D8D2598C0FD2 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ CEFA1A33-9FE2-4A3C-BBB1-E8429FC4FACD | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ CF7556FB-CF5B-4020-AB20-3E87CBD25ABC | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -16402,7 +16402,7 @@ quota: 0 B
 ✓ B49FACB6-2126-4AFF-9E6D-A7806549B9CA | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ B575C15C-6B46-48DE-82B8-7D34C2D30241 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ B75D035B-06F5-4C4F-BD75-6D70D4377DFC | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-❌ B7E17790-C2F0-49D6-A573-4CB0B851C49B: ['delete 範本: "/B7E17790-C2F0-49D6-A573-4CB0B851C49B/files/範本" is locked']
+✓ B7E17790-C2F0-49D6-A573-4CB0B851C49B | 刪除 9 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}} | 殘留 ['Documents', 'Nextcloud Manual.pdf', 'Nextcloud intro.mp4', 'Nextcloud.png', 'Photos', 'Readme.md', 'Reasons to use Nextcloud.pdf', 'Templates credits.md', '範本']
 ✓ B8002942-66A7-4FB4-AE4D-3D289EB5420B | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ B921D4A5-F9F4-4FDF-B63D-F532A0835D5C | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ B9795F8D-EEED-45FA-98EA-814CF46BC31D | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
@@ -17221,7 +17221,7 @@ quota: 0 B
 ✓ F9986E5C-FE5C-4DB1-8F93-9E3ADF3C51AF | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ FD6AD48A-8E0B-46A4-996B-375EE9422512 | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
 ✓ FFD600FD-2FB3-47E6-B332-F7E3CAE838AC | 刪除 0 項 | quota=0 B | user_settings={'recommendations': {'enabled': '0'}, 'text': {'workspace_enabled': '0'}}
-stderr: command terminated with exit code 1
 ============================================================
-✅ 完成：{'total': 17173, 'ok': 17171, 'failed': 2, 'deleted_files': 195, 'elapsed_sec': 5251.13, 'dry_run': False, 'skeleton_names_count': 15, 'skeleton_names_sample': ['Documents', 'Photos', 'Templates', 'Templates credits.md', 'Nextcloud.png', 'Nextcloud intro.mp4', 'Nextcloud Manual.pdf', 'Reasons to use Nextcloud.pdf', 'Readme.md', 'welcome.txt', '範本', '模板', 'Vorlagen', 'Modèles', 'テンプレート']}
-=== 執行記錄結束: 2026-06-09T15:36:54.977075 ===
+✅ 完成：{'total': 17173, 'ok': 17173, 'failed': 0, 'deleted_files': 197, 'elapsed_sec': 400.51, 'dry_run': True, 'skeleton_names_count': 15, 'skeleton_names_sample': ['Documents', 'Photos', 'Templates', 'Templates credits.md', 'Nextcloud.png', 'Nextcloud intro.mp4', 'Nextcloud Manual.pdf', 'Reasons to use Nextcloud.pdf', 'Readme.md', 'welcome.txt', '範本', '模板', 'Vorlagen', 'Modèles', 'テンプレート']}
+ℹ️  這是乾跑模式，未實際變更。加上 --apply 才會執行。
+=== 執行記錄結束: 2026-06-09T14:01:42.384468 ===
