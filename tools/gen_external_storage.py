@@ -43,6 +43,7 @@ from tools_external_storage import (
     generate_bucket_name_from_user_id,
     get_env_config,
     get_nextcloud_config,
+    resolve_mount_point_display,
     sanitize_bucket_name,
     setup_logger,
 )
@@ -303,7 +304,7 @@ def generate_mount_config(
 
     Args:
         mount_id: 掛載 ID（用於 import 時識別）
-        user_id: 使用者 ID（也作為掛載點名稱）
+        user_id: 內部識別（用於 bucket 命名；掛載點顯示名稱由 resolve_mount_point_display 決定）
         bucket_name: S3 Bucket 名稱
         access_key: S3 Access Key
         secret_key: S3 Secret Key
@@ -334,7 +335,7 @@ def generate_mount_config(
     )
     return {
         "mount_id": mount_id,
-        "mount_point": f"/{user_id}",
+        "mount_point": resolve_mount_point_display(user_id),
         "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
         "authentication_type": "amazons3::accesskey",
         "configuration": configuration,

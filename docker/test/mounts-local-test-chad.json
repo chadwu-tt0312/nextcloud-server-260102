@@ -1,0 +1,21 @@
+[
+  {
+    "mount_id": 1,
+    "mount_point": "/個人雲端硬碟",
+    "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+    "authentication_type": "amazons3::accesskey",
+    "configuration": {
+      "bucket": "chad-filespace",
+      "hostname": "minio1",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "key": "minioadmin",
+      "secret": "minioadminpw"
+    },
+    "options": {},
+    "applicable_users": ["chad"],
+    "applicable_groups": []
+  }
+]

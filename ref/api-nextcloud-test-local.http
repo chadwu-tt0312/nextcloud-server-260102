@@ -1,0 +1,65 @@
+### 本機測試環境 — MinIO + Nextcloud 外部儲存驗證
+### 前置：bash docker/test/setup-test-env.sh
+###
+### Nextcloud: http://localhost:8085  (admin / password123)
+### MinIO API:  http://localhost:9000  (minioadmin / minioadminpw)
+### MinIO UI:   http://localhost:9001
+
+@BASE = http://localhost:8085
+@ADMIN = admin:password123
+
+### 1. 列出所有外部儲存（應含 chad 的「個人雲端硬碟」）
+GET {{BASE}}/apps/files_external/globalstorages
+Authorization: Basic {{ADMIN}}
+OCS-APIRequest: true
+
+### 2. 僅查 chad 適用的掛載（applicableUsers 含 chad）
+# 從上一步回應中找 mountPoint=/個人雲端硬碟 且 applicableUsers=["chad"]
+
+### 3. 以 chad 身分列出檔案（WebDAV PROPFIND）
+# 需 chad 密碼；路徑為掛載點名稱
+# PROPFIND {{BASE}}/remote.php/dav/files/chad/個人雲端硬碟/
+# Authorization: Basic chad:<chad密碼>
+
+### 4. API 建立 chad 掛載（等同 mounts-local-test.json 第一筆，手動測試用）
+POST {{BASE}}/apps/files_external/globalstorages
+Authorization: Basic {{ADMIN}}
+OCS-APIRequest: true
+Content-Type: application/json
+
+{
+  "mountPoint": "/個人雲端硬碟",
+  "backend": "amazons3",
+  "authMechanism": "amazons3::accesskey",
+  "backendOptions": {
+    "bucket": "chad-filespace",
+    "hostname": "minio1",
+    "port": "9000",
+    "region": "us-east-1",
+    "use_ssl": false,
+    "use_path_style": true,
+    "legacy_auth": false,
+    "useMultipartCopy": true,
+    "key": "minioadmin",
+    "secret": "minioadminpw"
+  },
+  "mountOptions": {},
+  "applicableUsers": ["chad"],
+  "applicableGroups": []
+}
+
+### 5. 確認使用者存在
+GET {{BASE}}/ocs/v2.php/cloud/users/chad?format=json
+Authorization: Basic {{ADMIN}}
+OCS-APIRequest: true
+Accept: application/json
+
+GET {{BASE}}/ocs/v2.php/cloud/users/usr01?format=json
+Authorization: Basic {{ADMIN}}
+OCS-APIRequest: true
+Accept: application/json
+
+GET {{BASE}}/ocs/v2.php/cloud/users/00059094?format=json
+Authorization: Basic {{ADMIN}}
+OCS-APIRequest: true
+Accept: application/json

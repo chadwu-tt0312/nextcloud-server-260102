@@ -2,7 +2,7 @@
 
 **適用環境：** Nextcloud 32.x + `user_ldap` + K8s / Docker（本專案 UDrive）  
 **關聯 log：** [`log-analyze.md`](./log-analyze.md) §3.3  
-**最後更新：** 2026-06-12
+**最後更新：** 2026-06-15
 
 ---
 
