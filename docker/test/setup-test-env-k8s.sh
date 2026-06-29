@@ -20,27 +20,37 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+TOOLS_RUN="${REPO_ROOT}/tools/run_python.sh"
 
 MINIO_CONTAINER=""
 NC_CONTAINER=""
 DRY_RUN=false
 AUTO_YES=false
 USERS_ARG=""
+MOUNT_POINT_STYLE="display"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --minio-container|-m) MINIO_CONTAINER="$2"; shift 2 ;;
         --nextcloud-container|-c) NC_CONTAINER="$2"; shift 2 ;;
         --users|-u) USERS_ARG="$2"; shift 2 ;;
+        --mount-point-style) MOUNT_POINT_STYLE="$2"; shift 2 ;;
         --dry-run|-d) DRY_RUN=true; shift ;;
         --yes|-y) AUTO_YES=true; shift ;;
         --help|-h)
-            echo "用法: $0 [--dry-run] [--users chad] [-c NC_CONTAINER] [-m MINIO_CONTAINER]"
+            echo "用法: $0 [--dry-run] [--users chad] [--mount-point-style display|account] [-c NC_CONTAINER]"
+            echo ""
+            echo "  --mount-point-style account  資料夾名稱取自 bucket（例 00073839-filespace → /00073839）"
             exit 0
             ;;
         *) echo "未知參數: $1" >&2; exit 1 ;;
     esac
 done
+
+if [[ "$MOUNT_POINT_STYLE" != "display" && "$MOUNT_POINT_STYLE" != "account" ]]; then
+    echo "❌ --mount-point-style 僅支援 display 或 account" >&2
+    exit 1
+fi
 
 if [[ -z "$NC_CONTAINER" ]]; then
 #    NC_CONTAINER="$(docker ps --format '{{.Names}}' | grep -i nextcloud | grep -v db | head -n 1 || true)"
@@ -65,6 +75,7 @@ echo " Nextcloud + MinIO 測試環境設定"
 echo "========================================"
 echo "Nextcloud 容器: ${NC_CONTAINER}"
 echo "掛載設定檔:     ${MOUNTS_FILE}"
+echo "mount_point:    ${MOUNT_POINT_STYLE}"
 echo ""
 
 # ---- 1. MinIO buckets ----
@@ -101,7 +112,10 @@ if [[ ! -f "$SYNC_SCRIPT" ]]; then
     exit 1
 fi
 
-SYNC_ARGS=(python3 "$SYNC_SCRIPT" "$MOUNTS_FILE" --runtime k8s --namespace nextcloud)
+SYNC_ARGS=("$SYNC_SCRIPT" "$MOUNTS_FILE" --runtime k8s --namespace nextcloud)
+if [[ "$MOUNT_POINT_STYLE" == "account" ]]; then
+    SYNC_ARGS+=(--mount-point-style account)
+fi
 if [[ -n "$NC_CONTAINER" ]]; then
     SYNC_ARGS+=(--pod "$NC_CONTAINER")
 fi
@@ -109,8 +123,8 @@ if [[ "$DRY_RUN" == true ]]; then
     SYNC_ARGS+=(--dry-run)
 fi
 
-echo "PYTHONPATH=${REPO_ROOT}/tools ${SYNC_ARGS[*]}"
-PYTHONPATH="${REPO_ROOT}/tools" "${SYNC_ARGS[@]}"
+echo "${TOOLS_RUN} ${SYNC_ARGS[*]}"
+bash "${TOOLS_RUN}" "${SYNC_ARGS[@]}"
 
 # 260625-01: 廠內不能用 docker 
 # 260625-02: 廠內外部儲存數量太多
@@ -128,7 +142,7 @@ echo ""
 echo "驗證步驟："
 echo "  1. 開啟 http://localhost:8085"
 echo "  2. 以 chad 登入"
-echo "  3. 檔案 → 所有檔案，應看到「個人雲端硬碟」"
+echo "  3. 檔案 → 所有檔案（display: 個人雲端硬碟；account: bucket 名稱如 /00073839）"
 echo "  4. 進入後應有 welcome.txt"
 echo ""
 echo "若掛載狀態為 invalid，在容器內檢查連線："

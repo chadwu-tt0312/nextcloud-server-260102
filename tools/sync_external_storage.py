@@ -21,6 +21,11 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+from tools_mount_point import (
+    MOUNT_POINT_STYLE_ACCOUNT,
+    MOUNT_POINT_STYLE_DISPLAY,
+    apply_mount_point_style_to_mounts,
+)
 from tools_runtime import NextcloudRuntime, create_runtime
 
 ADMIN_USER = "admin"
@@ -99,12 +104,29 @@ def find_existing_mount(
 def find_duplicates(
     canonical: dict[str, Any],
     by_mount_key: dict[tuple[str, frozenset[str]], list[dict[str, Any]]],
+    by_bucket_key: dict[tuple[str, frozenset[str]], list[dict[str, Any]]],
 ) -> list[dict[str, Any]]:
-    mk = mount_match_key(canonical)
-    if not mk or mk not in by_mount_key:
-        return []
     canonical_id = int(canonical["mount_id"])
-    return [m for m in by_mount_key[mk] if int(m["mount_id"]) != canonical_id]
+    seen: set[int] = {canonical_id}
+    dups: list[dict[str, Any]] = []
+
+    mk = mount_match_key(canonical)
+    if mk and mk in by_mount_key:
+        for mount in by_mount_key[mk]:
+            mid = int(mount["mount_id"])
+            if mid not in seen:
+                seen.add(mid)
+                dups.append(mount)
+
+    bk = bucket_match_key(canonical)
+    if bk and bk in by_bucket_key:
+        for mount in by_bucket_key[bk]:
+            mid = int(mount["mount_id"])
+            if mid not in seen:
+                seen.add(mid)
+                dups.append(mount)
+
+    return dups
 
 
 def occ_encode(value: Any) -> str:
@@ -151,6 +173,17 @@ def update_mount(
     mount_id = int(existing["mount_id"])
     mount_point = desired.get("mount_point", "")
     logger.info(f"  更新 mount_id={mount_id} ({mount_point})")
+
+    existing_mp = existing.get("mount_point", "")
+    desired_mp = desired.get("mount_point", "")
+    if desired_mp and desired_mp != existing_mp:
+        if not run_occ(
+            runtime,
+            ["files_external:config", str(mount_id), "mount_point", desired_mp],
+            logger,
+            dry_run=dry_run,
+        ):
+            return False
 
     existing_cfg = existing.get("configuration") or {}
     desired_cfg = desired.get("configuration") or {}
@@ -324,7 +357,7 @@ def sync_mounts(
                 continue
             stats["updated"] += 1
 
-            for dup in find_duplicates(match, by_mount_key):
+            for dup in find_duplicates(match, by_mount_key, by_bucket_key):
                 if delete_mount(runtime, dup, logger, dry_run=dry_run):
                     stats["deleted"] += 1
                 else:
@@ -356,6 +389,12 @@ def main() -> int:
     parser.add_argument("-c", "--container", help="Docker 容器名稱")
     parser.add_argument("-n", "--namespace", default="default", help="K8s namespace")
     parser.add_argument("-p", "--pod", help="K8s Pod 名稱")
+    parser.add_argument(
+        "--mount-point-style",
+        choices=[MOUNT_POINT_STYLE_DISPLAY, MOUNT_POINT_STYLE_ACCOUNT],
+        default=None,
+        help="account：依 bucket 去掉 -filespace 重算 mount_point（適用 K8s 靜態 JSON）",
+    )
     parser.add_argument("--dry-run", action="store_true", help="僅預覽變更")
     parser.add_argument("--no-scan", action="store_true", help="同步後不執行 files_external:scan")
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -377,6 +416,10 @@ def main() -> int:
     if not isinstance(desired, list):
         logger.error("❌ mounts.json 必須是陣列")
         return 1
+
+    if args.mount_point_style == MOUNT_POINT_STYLE_ACCOUNT:
+        desired = apply_mount_point_style_to_mounts(desired, MOUNT_POINT_STYLE_ACCOUNT)
+        logger.info("已依 bucket 重算 mount_point（account 模式）")
 
     runtime = create_runtime(
         args.runtime,

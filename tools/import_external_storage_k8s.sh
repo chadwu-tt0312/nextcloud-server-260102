@@ -97,13 +97,14 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYNC_SCRIPT="${SCRIPT_DIR}/sync_external_storage.py"
+TOOLS_RUN="${SCRIPT_DIR}/run_python.sh"
 
 if [[ "$UPSERT" == true ]]; then
     if [[ ! -f "$SYNC_SCRIPT" ]]; then
         echo -e "${RED}❌ 找不到 ${SYNC_SCRIPT}${NC}" >&2
         exit 1
     fi
-    SYNC_ARGS=(python3 "$SYNC_SCRIPT" "$MOUNTS_FILE" --runtime k8s --namespace "$NAMESPACE")
+    SYNC_ARGS=("$SYNC_SCRIPT" "$MOUNTS_FILE" --runtime k8s --namespace "$NAMESPACE")
     if [[ -n "$POD_NAME" ]]; then
         SYNC_ARGS+=(--pod "$POD_NAME")
     fi
@@ -111,7 +112,7 @@ if [[ "$UPSERT" == true ]]; then
         SYNC_ARGS+=(--dry-run)
     fi
     echo -e "${BLUE}🔄 Upsert 模式（更新已存在 + 新增）${NC}"
-    PYTHONPATH="${SCRIPT_DIR}" "${SYNC_ARGS[@]}"
+    bash "${TOOLS_RUN}" "${SYNC_ARGS[@]}"
     exit $?
 fi
 

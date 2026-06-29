@@ -31,6 +31,7 @@ import csv
 import hashlib
 import json
 import logging
+import os
 import sys
 import traceback
 from datetime import datetime
@@ -43,7 +44,9 @@ from tools_external_storage import (
     generate_bucket_name_from_user_id,
     get_env_config,
     get_nextcloud_config,
-    resolve_mount_point_display,
+    MOUNT_POINT_STYLE_ACCOUNT,
+    MOUNT_POINT_STYLE_DISPLAY,
+    resolve_mount_point,
     sanitize_bucket_name,
     setup_logger,
 )
@@ -298,13 +301,17 @@ def generate_mount_config(
     use_path_style: bool = True,
     applicable_users: list[str] | None = None,
     applicable_groups: list[str] | None = None,
+    mount_point_style: str = MOUNT_POINT_STYLE_DISPLAY,
+    bucket_suffix: str = "-filespace",
 ) -> dict[str, Any]:
     """
     產生單筆 Nextcloud External Storage 掛載設定
 
     Args:
         mount_id: 掛載 ID（用於 import 時識別）
-        user_id: 內部識別（用於 bucket 命名；掛載點顯示名稱由 resolve_mount_point_display 決定）
+        user_id: 內部識別（用於 bucket 命名；掛載點由 resolve_mount_point 決定）
+        mount_point_style: display（預設）或 account（每人資料夾，名稱取自 bucket）
+        bucket_suffix: account 模式時自 bucket 移除的後綴（預設 -filespace）
         bucket_name: S3 Bucket 名稱
         access_key: S3 Access Key
         secret_key: S3 Secret Key
@@ -335,7 +342,13 @@ def generate_mount_config(
     )
     return {
         "mount_id": mount_id,
-        "mount_point": resolve_mount_point_display(user_id),
+        "mount_point": resolve_mount_point(
+            user_id,
+            style=mount_point_style,
+            applicable_users=effective_users,
+            bucket=bucket_name,
+            bucket_suffix=bucket_suffix,
+        ),
         "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
         "authentication_type": "amazons3::accesskey",
         "configuration": configuration,
@@ -517,6 +530,7 @@ def generate_from_import_csv(
     resolve_nextcloud_uid: bool = True,
     state_path: Path | None = None,
     resume: bool = True,
+    mount_point_style: str = MOUNT_POINT_STYLE_DISPLAY,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """
     從 import-accounts.csv 格式讀取使用者清單並產生掛載設定
@@ -611,6 +625,8 @@ def generate_from_import_csv(
             use_ssl=use_ssl,
             use_path_style=use_path_style,
             applicable_users=applicable_users,
+            mount_point_style=mount_point_style,
+            bucket_suffix=bucket_suffix,
         )
 
     # 讀取 CSV 檔案
@@ -749,6 +765,14 @@ def main() -> int:
         help="停用 Nextcloud UID 查詢，沿用 CSV 鍵值（如 Emp_no）作為 applicable_users；僅當該鍵值即為 Nextcloud 帳號名稱時使用（LDAP 若為 UUID 帳號名稱請勿使用）",
     )
 
+    parser.add_argument(
+        "--mount-point-style",
+        type=str,
+        choices=[MOUNT_POINT_STYLE_DISPLAY, MOUNT_POINT_STYLE_ACCOUNT],
+        default=os.environ.get("ENV_MOUNT_POINT_STYLE", MOUNT_POINT_STYLE_DISPLAY),
+        help="掛載點命名：display=/個人雲端硬碟（預設）；account=每人資料夾（名稱取自 bucket 去掉 -filespace）",
+    )
+
     # Bucket 命名設定
     parser.add_argument(
         "--bucket-suffix",
@@ -829,6 +853,7 @@ def main() -> int:
             resolve_nextcloud_uid=not args.no_nextcloud_uid_lookup,
             state_path=state_path if resume else None,
             resume=resume,
+            mount_point_style=args.mount_point_style,
         )
 
         if not mounts:

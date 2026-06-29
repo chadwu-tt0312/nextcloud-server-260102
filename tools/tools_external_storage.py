@@ -395,47 +395,19 @@ def sanitize_bucket_name(name: str) -> str:
     return result
 
 
-# 外部儲存掛載點顯示名稱（UI 資料夾名稱，與 bucket 無關）
-MOUNT_POINT_PERSONAL = "/個人雲端硬碟"
-MOUNT_POINT_DEPARTMENT = "/部門雲端硬碟"
-
-
-def resolve_mount_point_display(user_id: str) -> str:
-    """
-    依內部 user_id（例如 minio-00059094、minio-DEPT_SMG_ARC1）決定掛載點顯示名稱。
-
-    規則：
-    - minio-DEPT_* → 部門雲端硬碟
-    - 其他 minio-* → 個人雲端硬碟
-    """
-    normalized = user_id.lstrip("/")
-    if normalized.startswith("minio-DEPT_"):
-        return MOUNT_POINT_DEPARTMENT
-    if normalized.startswith("minio-"):
-        return MOUNT_POINT_PERSONAL
-    return f"/{normalized}"
-
-
-def classify_mount_point_rename(
-    current_mount_point: str,
-    *,
-    personal_name: str = MOUNT_POINT_PERSONAL,
-    department_name: str = MOUNT_POINT_DEPARTMENT,
-) -> str | None:
-    """
-    將現有 mount_point 對應到新的顯示名稱；已是目標名稱或非 minio-* 時回傳 None（略過）。
-
-    Returns:
-        新 mount_point，或 None 表示不需變更
-    """
-    mount = current_mount_point if current_mount_point.startswith("/") else f"/{current_mount_point}"
-    if mount in (personal_name, department_name):
-        return None
-    if mount.startswith("/minio-DEPT_"):
-        return department_name
-    if mount.startswith("/minio-"):
-        return personal_name
-    return None
+from tools_mount_point import (  # noqa: E402  re-export
+    DEFAULT_BUCKET_SUFFIX,
+    MOUNT_POINT_DEPARTMENT,
+    MOUNT_POINT_PERSONAL,
+    MOUNT_POINT_STYLE_ACCOUNT,
+    MOUNT_POINT_STYLE_DISPLAY,
+    account_label_from_bucket,
+    apply_mount_point_style_to_mount,
+    apply_mount_point_style_to_mounts,
+    classify_mount_point_rename,
+    resolve_mount_point,
+    resolve_mount_point_display,
+)
 
 
 def generate_bucket_name_from_user_id(user_id: str, bucket_suffix: str = "-filespace") -> str:
