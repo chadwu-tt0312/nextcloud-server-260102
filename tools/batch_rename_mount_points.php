@@ -7,6 +7,9 @@
  *   - /minio-{Emp_no}        → /個人雲端硬碟
  *   - /minio-DEPT_{Dept}     → /部門雲端硬碟
  *
+ * 同一使用者可同時擁有「個人雲端硬碟」與「部門雲端硬碟」；
+ * 衝突僅在「同一使用者 + 相同目標名稱」出現多筆時（例如兩個個人掛載）。
+ *
  * 為何用 PHP（容器內執行）：
  *   - REST API PUT 需 PasswordConfirmation，不適合 1.7 萬筆自動化
  *   - occ files_external:config 逐筆會 bootstrap 上萬次
