@@ -18,6 +18,7 @@ POD_NAME=""
 MOUNTS_FILE=""
 DRY_RUN=false
 AUTO_CONFIRM=false
+UPSERT=false
 
 # 顏色輸出
 RED='\033[0;31m'
@@ -45,6 +46,10 @@ while [[ $# -gt 0 ]]; do
             AUTO_CONFIRM=true
             shift
             ;;
+        --upsert|-U)
+            UPSERT=true
+            shift
+            ;;
         --help|-h)
             echo "用法: $0 [OPTIONS] <mounts.json>"
             echo ""
@@ -53,6 +58,7 @@ while [[ $# -gt 0 ]]; do
             echo "  -p, --pod NAME         指定 Pod 名稱（預設：自動偵測）"
             echo "  -d, --dry-run           僅預覽，不實際匯入"
             echo "  -y, --yes               自動確認，不詢問"
+            echo "  -U, --upsert            更新已存在掛載並新增缺少項目（建議用於重複執行）"
             echo "  -h, --help              顯示此說明"
             echo ""
             echo "範例:"
@@ -62,10 +68,14 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         *)
+            if [[ "$1" == --* || "$1" == -* ]]; then
+                echo -e "${RED}❌ 錯誤：未知參數 $1${NC}" >&2
+                exit 1
+            fi
             if [[ -z "$MOUNTS_FILE" ]]; then
                 MOUNTS_FILE="$1"
             else
-                echo -e "${RED}❌ 錯誤：未知參數 $1${NC}" >&2
+                echo -e "${RED}❌ 錯誤：只能指定一個 mounts.json 檔案${NC}" >&2
                 exit 1
             fi
             shift
@@ -83,6 +93,26 @@ fi
 if [[ ! -f "$MOUNTS_FILE" ]]; then
     echo -e "${RED}❌ 錯誤：檔案不存在: $MOUNTS_FILE${NC}" >&2
     exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SYNC_SCRIPT="${SCRIPT_DIR}/sync_external_storage.py"
+
+if [[ "$UPSERT" == true ]]; then
+    if [[ ! -f "$SYNC_SCRIPT" ]]; then
+        echo -e "${RED}❌ 找不到 ${SYNC_SCRIPT}${NC}" >&2
+        exit 1
+    fi
+    SYNC_ARGS=(python3 "$SYNC_SCRIPT" "$MOUNTS_FILE" --runtime k8s --namespace "$NAMESPACE")
+    if [[ -n "$POD_NAME" ]]; then
+        SYNC_ARGS+=(--pod "$POD_NAME")
+    fi
+    if [[ "$DRY_RUN" == true ]]; then
+        SYNC_ARGS+=(--dry-run)
+    fi
+    echo -e "${BLUE}🔄 Upsert 模式（更新已存在 + 新增）${NC}"
+    PYTHONPATH="${SCRIPT_DIR}" "${SYNC_ARGS[@]}"
+    exit $?
 fi
 
 # 檢查 kubectl 是否可用
@@ -137,7 +167,7 @@ kubectl cp "$MOUNTS_FILE" "${NAMESPACE}/${POD_NAME}:${TEMP_PATH}"
 
 # 預覽模式
 echo -e "${BLUE}🔍 預覽模式（dry-run）...${NC}"
-if kubectl exec -n "$NAMESPACE" "$POD_NAME" -u www-data -- \
+if kubectl exec -n "$NAMESPACE" "$POD_NAME" -- \
     php occ files_external:import --dry "${TEMP_PATH}" 2>&1; then
     echo -e "${GREEN}✅ 預覽成功${NC}"
 else
@@ -169,7 +199,7 @@ fi
 echo -e "${BLUE}📥 開始匯入...${NC}"
 START_TIME=$(date +%s)
 
-if kubectl exec -n "$NAMESPACE" "$POD_NAME" -u www-data -- \
+if kubectl exec -n "$NAMESPACE" "$POD_NAME" -- \
     php occ files_external:import "${TEMP_PATH}" 2>&1; then
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))

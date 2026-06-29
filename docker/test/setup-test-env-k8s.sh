@@ -43,7 +43,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$NC_CONTAINER" ]]; then
-    NC_CONTAINER="$(docker ps --format '{{.Names}}' | grep -i nextcloud | grep -v db | head -n 1 || true)"
+#    NC_CONTAINER="$(docker ps --format '{{.Names}}' | grep -i nextcloud | grep -v db | head -n 1 || true)"
+    NC_CONTAINER=$(kubectl get pod -n nextcloud -l app=nextcloud -o jsonpath='{.items[0].metadata.name}')
 fi
 
 if [[ -z "$NC_CONTAINER" ]]; then
@@ -53,7 +54,9 @@ fi
 
 MOUNTS_FILE="${SCRIPT_DIR}/mounts-local-test.json"
 if [[ -n "$USERS_ARG" && "$USERS_ARG" == "chad" ]]; then
-    MOUNTS_FILE="${SCRIPT_DIR}/mounts-local-test-chad.json"
+#    MOUNTS_FILE="${SCRIPT_DIR}/mounts-local-test-chad.json"
+#    MOUNTS_FILE="${SCRIPT_DIR}/mounts-local-test-smg_arc304-dep.json"
+    MOUNTS_FILE="${SCRIPT_DIR}/mounts-local-test-smg_arc304.json"
 fi
 SYNC_SCRIPT="${REPO_ROOT}/tools/sync_external_storage.py"
 
@@ -73,17 +76,21 @@ if [[ -n "$MINIO_CONTAINER" ]]; then
     BUCKET_ARGS+=(--minio-container "$MINIO_CONTAINER")
 fi
 
-echo "[1/4] 建立 MinIO bucket..."
-bash "${SCRIPT_DIR}/setup-minio-buckets.sh" "${BUCKET_ARGS[@]}"
+# 260625: 廠內不要建立 bucket
+# echo "[1/4] 建立 MinIO bucket..."
+# bash "${SCRIPT_DIR}/setup-minio-buckets.sh" "${BUCKET_ARGS[@]}"
 
+# 260625: 廠內不能用 docker，不額外做啟用行為 
 # ---- 2. 啟用 files_external ----
-echo ""
-echo "[2/4] 啟用 files_external app..."
-if [[ "$DRY_RUN" == true ]]; then
-    echo "  (dry-run) docker exec -u www-data ${NC_CONTAINER} php occ app:enable files_external"
-else
-    docker exec -u www-data "${NC_CONTAINER}" php occ app:enable files_external --force || true
-fi
+# echo ""
+# echo "[2/4] 啟用 files_external app..."
+# if [[ "$DRY_RUN" == true ]]; then
+# #    echo "  (dry-run) docker exec -u www-data ${NC_CONTAINER} php occ app:enable files_external"
+#     echo "  (dry-run) kubectl exec -n nextcloud -it ${NC_CONTAINER} -- php /var/www/html/occ app:list"
+# else
+# #    docker exec -u www-data "${NC_CONTAINER}" php occ app:enable files_external --force || true
+#     kubectl exec -n nextcloud -it "${NC_CONTAINER}" -- php /var/www/html/occ app:list
+# fi
 
 # ---- 3. 匯入外部儲存 ----
 echo ""
@@ -94,17 +101,24 @@ if [[ ! -f "$SYNC_SCRIPT" ]]; then
     exit 1
 fi
 
-SYNC_ARGS=(python3 "$SYNC_SCRIPT" "$MOUNTS_FILE" --runtime docker --container "$NC_CONTAINER")
+SYNC_ARGS=(python3 "$SYNC_SCRIPT" "$MOUNTS_FILE" --runtime k8s --namespace nextcloud)
+if [[ -n "$NC_CONTAINER" ]]; then
+    SYNC_ARGS+=(--pod "$NC_CONTAINER")
+fi
 if [[ "$DRY_RUN" == true ]]; then
     SYNC_ARGS+=(--dry-run)
 fi
 
+echo "PYTHONPATH=${REPO_ROOT}/tools ${SYNC_ARGS[*]}"
 PYTHONPATH="${REPO_ROOT}/tools" "${SYNC_ARGS[@]}"
 
+# 260625-01: 廠內不能用 docker 
+# 260625-02: 廠內外部儲存數量太多
 # ---- 4. 驗證掛載狀態 ----
 echo ""
 echo "[4/4] 列出外部儲存..."
-docker exec -u www-data "${NC_CONTAINER}" php occ files_external:list || true
+# docker exec -u www-data "${NC_CONTAINER}" php occ files_external:list || true
+# kubectl exec -n nextcloud -it "${NC_CONTAINER}" -- php /var/www/html/occ files_external:list || true
 
 echo ""
 echo "========================================"

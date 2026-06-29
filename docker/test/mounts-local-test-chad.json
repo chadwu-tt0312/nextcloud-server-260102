@@ -14,7 +14,9 @@
       "key": "minioadmin",
       "secret": "minioadminpw"
     },
-    "options": {},
+    "options": {
+      "filesystem_check_changes": 1
+    },
     "applicable_users": ["chad"],
     "applicable_groups": []
   }

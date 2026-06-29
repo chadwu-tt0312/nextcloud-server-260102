@@ -14,7 +14,9 @@
       "key": "minioadmin",
       "secret": "minioadminpw"
     },
-    "options": {},
+    "options": {
+      "filesystem_check_changes": 1
+    },
     "applicable_users": ["chad"],
     "applicable_groups": []
   },
@@ -33,7 +35,9 @@
       "key": "minioadmin",
       "secret": "minioadminpw"
     },
-    "options": {},
+    "options": {
+      "filesystem_check_changes": 1
+    },
     "applicable_users": ["usr01"],
     "applicable_groups": []
   },
@@ -52,7 +56,9 @@
       "key": "minioadmin",
       "secret": "minioadminpw"
     },
-    "options": {},
+    "options": {
+      "filesystem_check_changes": 1
+    },
     "applicable_users": ["00059094"],
     "applicable_groups": []
   }

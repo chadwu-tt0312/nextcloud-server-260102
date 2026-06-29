@@ -17,6 +17,7 @@ CONTAINER_NAME=""
 MOUNTS_FILE=""
 DRY_RUN=false
 AUTO_CONFIRM=false
+UPSERT=false
 
 # 顏色輸出
 RED='\033[0;31m'
@@ -40,6 +41,10 @@ while [[ $# -gt 0 ]]; do
             AUTO_CONFIRM=true
             shift
             ;;
+        --upsert|-U)
+            UPSERT=true
+            shift
+            ;;
         --help|-h)
             echo "用法: $0 [OPTIONS] <mounts.json>"
             echo ""
@@ -47,6 +52,7 @@ while [[ $# -gt 0 ]]; do
             echo "  -c, --container NAME    指定容器名稱（預設：自動偵測）"
             echo "  -d, --dry-run           僅預覽，不實際匯入"
             echo "  -y, --yes               自動確認，不詢問"
+            echo "  -U, --upsert            更新已存在掛載並新增缺少項目（建議用於重複執行）"
             echo "  -h, --help              顯示此說明"
             echo ""
             echo "範例:"
@@ -55,11 +61,19 @@ while [[ $# -gt 0 ]]; do
             echo "  $0 mounts.json --dry-run"
             exit 0
             ;;
+        --upsert|-U)
+            UPSERT=true
+            shift
+            ;;
         *)
+            if [[ "$1" == --* || "$1" == -* ]]; then
+                echo -e "${RED}❌ 錯誤：未知參數 $1${NC}" >&2
+                exit 1
+            fi
             if [[ -z "$MOUNTS_FILE" ]]; then
                 MOUNTS_FILE="$1"
             else
-                echo -e "${RED}❌ 錯誤：未知參數 $1${NC}" >&2
+                echo -e "${RED}❌ 錯誤：只能指定一個 mounts.json 檔案${NC}" >&2
                 exit 1
             fi
             shift
@@ -77,6 +91,26 @@ fi
 if [[ ! -f "$MOUNTS_FILE" ]]; then
     echo -e "${RED}❌ 錯誤：檔案不存在: $MOUNTS_FILE${NC}" >&2
     exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SYNC_SCRIPT="${SCRIPT_DIR}/sync_external_storage.py"
+
+if [[ "$UPSERT" == true ]]; then
+    if [[ ! -f "$SYNC_SCRIPT" ]]; then
+        echo -e "${RED}❌ 找不到 ${SYNC_SCRIPT}${NC}" >&2
+        exit 1
+    fi
+    SYNC_ARGS=(python3 "$SYNC_SCRIPT" "$MOUNTS_FILE" --runtime docker)
+    if [[ -n "$CONTAINER_NAME" ]]; then
+        SYNC_ARGS+=(--container "$CONTAINER_NAME")
+    fi
+    if [[ "$DRY_RUN" == true ]]; then
+        SYNC_ARGS+=(--dry-run)
+    fi
+    echo -e "${BLUE}🔄 Upsert 模式（更新已存在 + 新增）${NC}"
+    PYTHONPATH="${SCRIPT_DIR}" "${SYNC_ARGS[@]}"
+    exit $?
 fi
 
 # 自動偵測容器名稱

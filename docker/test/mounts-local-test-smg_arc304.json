@@ -1,0 +1,27 @@
+[
+  {
+    "mount_id": 1,
+    "mount_point": "/個人雲端硬碟",
+    "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+    "authentication_type": "amazons3::accesskey",
+    "configuration": {
+      "bucket": "smg-arc304-filespace",
+      "hostname": "10.11.233.189",
+      "port": "32651",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "legacy_auth": false,
+      "useMultipartCopy": true,
+      "key": "UAXN7VKU5APDSOV3ISA0",
+      "secret": "rl120LbIeVEJHPuMqQn3hhMkazg+397UjhpKzq5K"    },
+    "options": {
+            "filesystem_check_changes": 1
+        },
+    "applicable_users": [
+      "528AC5E4-67B6-4ECB-9967-CA7D8FBDFD92",
+      "admin"
+    ],
+    "applicable_groups": []
+  }
+]

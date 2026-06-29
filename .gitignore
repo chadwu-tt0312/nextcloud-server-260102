@@ -191,3 +191,5 @@ tools/.venv/
 
 build/
 dist/
+
+docker/test/logs/
