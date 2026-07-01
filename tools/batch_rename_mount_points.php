@@ -3,25 +3,12 @@
 /**
  * Nextcloud 批次重新命名外部儲存掛載點（單次 bootstrap）
  *
- * 用途：將 minio-* 掛載點改為使用者友善名稱：
- *   - /minio-{Emp_no}        → /個人雲端硬碟
- *   - /minio-DEPT_{Dept}     → /部門雲端硬碟
+ * 命名規則：
+ *   /minio-{Emp_no}           → /個人-{Emp_no}（每位使用者最多 1 個）
+ *   /minio-DEPT_{Dept-Name}   → /部門-{Dept_Name}（每位使用者可 0～n 個）
  *
- * 同一使用者可同時擁有「個人雲端硬碟」與「部門雲端硬碟」；
- * 衝突僅在「同一使用者 + 相同目標名稱」出現多筆時（例如兩個個人掛載）。
- *
- * 為何用 PHP（容器內執行）：
- *   - REST API PUT 需 PasswordConfirmation，不適合 1.7 萬筆自動化
- *   - occ files_external:config 逐筆會 bootstrap 上萬次
- *   - 本腳本只 bootstrap 一次，透過 GlobalStoragesService::updateStorage 正確觸發掛載 hook
- *
- * 執行（在容器內，以 www-data 身分）：
- *   php /tmp/batch_rename_mount_points.php /tmp/rename_mount_config.json
- *
- * config JSON 格式：
+ * config JSON：
  * {
- *   "personal_name": "/個人雲端硬碟",
- *   "department_name": "/部門雲端硬碟",
  *   "backend": "amazons3",
  *   "dry_run": true,
  *   "limit": 0,
@@ -46,39 +33,140 @@ if (!is_array($cfg)) {
 	exit(1);
 }
 
-$personalName = $cfg['personal_name'] ?? '/個人雲端硬碟';
-$departmentName = $cfg['department_name'] ?? '/部門雲端硬碟';
 $backendFilter = $cfg['backend'] ?? 'amazons3';
 $dryRun = (bool)($cfg['dry_run'] ?? false);
 $limit = (int)($cfg['limit'] ?? 0);
 $progressInterval = max(1, (int)($cfg['progress_interval'] ?? 500));
+$bucketSuffix = $cfg['bucket_suffix'] ?? '-filespace';
 
 function out(array $row): void {
 	fwrite(STDOUT, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n");
 }
 
-/**
- * @return string|null 新掛載點，null 表示略過
- */
-function classifyMountPoint(
-	string $current,
-	string $personalName,
-	string $departmentName
-): ?string {
-	$mount = $current;
-	if ($mount !== '' && $mount[0] !== '/') {
-		$mount = '/' . $mount;
-	}
-	if ($mount === $personalName || $mount === $departmentName) {
+function normalizeMount(string $mp): string {
+	return str_starts_with($mp, '/') ? $mp : '/' . $mp;
+}
+
+function isLabeledPersonal(string $mp): bool {
+	return str_starts_with(normalizeMount($mp), '/個人-');
+}
+
+function isLabeledDepartment(string $mp): bool {
+	return str_starts_with(normalizeMount($mp), '/部門-');
+}
+
+function isLabeled(string $mp): bool {
+	return isLabeledPersonal($mp) || isLabeledDepartment($mp);
+}
+
+function accountLabelFromBucket(string $bucket, string $suffix): ?string {
+	$bucket = trim($bucket);
+	if ($bucket === '') {
 		return null;
 	}
-	if (str_starts_with($mount, '/minio-DEPT_')) {
-		return $departmentName;
-	}
-	if (str_starts_with($mount, '/minio-')) {
-		return $personalName;
+	if ($suffix !== '' && str_ends_with($bucket, $suffix)) {
+		$label = trim(substr($bucket, 0, -strlen($suffix)));
+		return $label !== '' ? $label : null;
 	}
 	return null;
+}
+
+function personalLabelFromMount(string $mountPoint, string $bucket, string $suffix): ?string {
+	$label = accountLabelFromBucket($bucket, $suffix);
+	if ($label !== null) {
+		return $label;
+	}
+	$m = ltrim($mountPoint, '/');
+	if (str_starts_with($m, 'minio-') && !str_starts_with($m, 'minio-DEPT_')) {
+		return substr($m, strlen('minio-'));
+	}
+	return null;
+}
+
+function departmentLabelFromBucket(string $bucket, string $suffix): ?string {
+	$name = accountLabelFromBucket($bucket, $suffix);
+	if ($name === null) {
+		return null;
+	}
+	$lower = strtolower($name);
+	foreach (['dept-', 'dept_', 'dep-', 'dep_'] as $prefix) {
+		if (str_starts_with($lower, $prefix)) {
+			$name = substr($name, strlen($prefix));
+			break;
+		}
+	}
+	$label = strtoupper(str_replace(['-', '.'], '_', $name));
+	return $label !== '' ? $label : null;
+}
+
+function isGenericPersonal(string $mp): bool {
+	return normalizeMount($mp) === '/個人雲端硬碟';
+}
+
+function isGenericDepartment(string $mp): bool {
+	return normalizeMount($mp) === '/部門雲端硬碟';
+}
+
+function departmentLabelFromMount(string $mountPoint, array $groups): ?string {
+	$m = ltrim($mountPoint, '/');
+	if (str_starts_with($m, 'minio-DEPT_')) {
+		return str_replace('-', '_', substr($m, strlen('minio-DEPT_')));
+	}
+	foreach ($groups as $group) {
+		if (str_starts_with(strtolower($group), 'dept_')) {
+			return str_replace('-', '_', substr($group, 5));
+		}
+	}
+	return null;
+}
+
+/**
+ * @param \OCA\Files_External\Lib\StorageConfig $mount
+ */
+function classifyMount($mount, string $bucketSuffix): ?string {
+	$old = normalizeMount($mount->getMountPoint());
+	if (isLabeled($old)) {
+		return null;
+	}
+	$bucket = (string)($mount->getBackendOption('bucket') ?? '');
+	$groups = $mount->getApplicableGroups();
+
+	if (isGenericPersonal($old)) {
+		$label = personalLabelFromMount($old, $bucket, $bucketSuffix);
+		return $label !== null ? '/個人-' . $label : null;
+	}
+	if (isGenericDepartment($old)) {
+		$label = departmentLabelFromBucket($bucket, $bucketSuffix) ?? departmentLabelFromMount($old, $groups);
+		return $label !== null ? '/部門-' . strtoupper($label) : null;
+	}
+	if (str_starts_with($old, '/minio-DEPT_')) {
+		$label = departmentLabelFromMount($old, $groups);
+		return $label !== null ? '/部門-' . strtoupper($label) : null;
+	}
+	if (str_starts_with($old, '/minio-')) {
+		$label = personalLabelFromMount($old, $bucket, $bucketSuffix);
+		return $label !== null ? '/個人-' . $label : null;
+	}
+	return null;
+}
+
+/**
+ * @param \OCA\Files_External\Lib\StorageConfig $mount
+ * @return list<string>
+ */
+function mountIdentities($mount): array {
+	$users = array_values(array_filter(
+		$mount->getApplicableUsers(),
+		static fn (string $u): bool => $u !== 'admin'
+	));
+	if (count($users) > 0) {
+		return $users;
+	}
+	$groups = $mount->getApplicableGroups();
+	if (count($groups) > 0) {
+		return $groups;
+	}
+	return ['__global__'];
 }
 
 $base = getenv('NC_BASE') ?: '/var/www/html/lib/base.php';
@@ -113,8 +201,9 @@ try {
 
 $stats['total'] = count($allMounts);
 
-// 預先掃描：同一使用者若會有兩個相同新掛載點，標記衝突
-$userTargetCounts = [];
+$existingPersonal = [];
+$personalCandidates = [];
+$targetCounts = [];
 $planned = [];
 
 foreach ($allMounts as $mount) {
@@ -123,10 +212,20 @@ foreach ($allMounts as $mount) {
 		continue;
 	}
 
-	$oldPoint = $mount->getMountPoint();
-	$newPoint = classifyMountPoint($oldPoint, $personalName, $departmentName);
+	$oldPoint = normalizeMount($mount->getMountPoint());
+	$identities = mountIdentities($mount);
+
+	if (isLabeledPersonal($oldPoint)) {
+		foreach ($identities as $uid) {
+			$existingPersonal[$uid] = ($existingPersonal[$uid] ?? 0) + 1;
+		}
+		$stats['already']++;
+		continue;
+	}
+
+	$newPoint = classifyMount($mount, $bucketSuffix);
 	if ($newPoint === null) {
-		if ($oldPoint === $personalName || $oldPoint === $departmentName) {
+		if (isLabeledDepartment($oldPoint)) {
 			$stats['already']++;
 		} else {
 			$stats['skipped']++;
@@ -135,28 +234,36 @@ foreach ($allMounts as $mount) {
 	}
 
 	$stats['eligible']++;
-	$users = $mount->getApplicableUsers();
-	if (count($users) === 0) {
-		$users = ['__global__'];
-	}
+	$isPersonal = str_starts_with($newPoint, '/個人-');
 
 	$planned[] = [
 		'mount' => $mount,
 		'old' => $oldPoint,
 		'new' => $newPoint,
-		'users' => $users,
+		'users' => $identities,
+		'is_personal' => $isPersonal,
 	];
 
-	foreach ($users as $uid) {
+	foreach ($identities as $uid) {
+		if ($isPersonal) {
+			$personalCandidates[$uid] = ($personalCandidates[$uid] ?? 0) + 1;
+		}
 		$key = $uid . "\0" . $newPoint;
-		$userTargetCounts[$key] = ($userTargetCounts[$key] ?? 0) + 1;
+		$targetCounts[$key] = ($targetCounts[$key] ?? 0) + 1;
 	}
 }
 
-$conflictKeys = [];
-foreach ($userTargetCounts as $key => $count) {
+$duplicateTarget = [];
+foreach ($targetCounts as $key => $count) {
 	if ($count > 1) {
-		$conflictKeys[$key] = true;
+		$duplicateTarget[$key] = true;
+	}
+}
+
+$personalConflictUsers = [];
+foreach ($personalCandidates as $uid => $count) {
+	if ($count + ($existingPersonal[$uid] ?? 0) > 1) {
+		$personalConflictUsers[$uid] = true;
 	}
 }
 
@@ -171,12 +278,20 @@ foreach ($planned as $item) {
 	$oldPoint = $item['old'];
 	$newPoint = $item['new'];
 	$users = $item['users'];
+	$isPersonal = $item['is_personal'];
 
 	$hasConflict = false;
+	$error = '';
 	foreach ($users as $uid) {
-		$key = $uid . "\0" . $newPoint;
-		if (isset($conflictKeys[$key])) {
+		if ($isPersonal && isset($personalConflictUsers[$uid])) {
 			$hasConflict = true;
+			$error = 'conflict: 同一使用者只能有一個個人外部磁碟';
+			break;
+		}
+		$key = $uid . "\0" . $newPoint;
+		if (isset($duplicateTarget[$key])) {
+			$hasConflict = true;
+			$error = 'conflict: 同一使用者將有多個相同掛載點名稱';
 			break;
 		}
 	}
@@ -189,7 +304,7 @@ foreach ($planned as $item) {
 			'old' => $oldPoint,
 			'new' => $newPoint,
 			'users' => $users,
-			'error' => 'conflict: 同一使用者將有多個相同掛載點名稱',
+			'error' => $error,
 		]);
 		$processed++;
 		continue;

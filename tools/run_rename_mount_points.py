@@ -3,8 +3,8 @@
 Nextcloud 批次重新命名外部儲存掛載點（Docker / Kubernetes 驅動器）
 
 將 minio-* 掛載點改為：
-  - /minio-{Emp_no}    → /個人雲端硬碟
-  - /minio-DEPT_{Dept} → /部門雲端硬碟
+  - /minio-{Emp_no}           → /個人-{Emp_no}（每使用者最多 1 個）
+  - /minio-DEPT_{Dept-Name}   → /部門-{Dept_Name}（每使用者可 0～n 個）
 
 建議流程（約 1.7 萬筆）：
   1. 乾跑預覽統計
@@ -30,11 +30,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-from tools_external_storage import (
-    MOUNT_POINT_DEPARTMENT,
-    MOUNT_POINT_PERSONAL,
-    setup_logger,
-)
+from tools_external_storage import setup_logger
 from tools_runtime import create_runtime
 
 REMOTE_SCRIPT_PATH = "/tmp/batch_rename_mount_points.php"
@@ -81,18 +77,6 @@ def main() -> int:
         help="最多處理幾筆（0=不限制，用於小量驗證）",
     )
     parser.add_argument(
-        "--personal-name",
-        type=str,
-        default=MOUNT_POINT_PERSONAL,
-        help=f"個人掛載顯示名稱（預設 {MOUNT_POINT_PERSONAL}）",
-    )
-    parser.add_argument(
-        "--department-name",
-        type=str,
-        default=MOUNT_POINT_DEPARTMENT,
-        help=f"部門掛載顯示名稱（預設 {MOUNT_POINT_DEPARTMENT}）",
-    )
-    parser.add_argument(
         "--progress-interval",
         type=int,
         default=500,
@@ -116,7 +100,7 @@ def main() -> int:
 
     logger.info(f"=== 執行記錄開始: {datetime.now().isoformat()} ===")
     logger.info(f"模式: {'DRY-RUN（乾跑）' if dry_run else 'APPLY（實際執行）'}")
-    logger.info(f"個人: {args.personal_name} | 部門: {args.department_name}")
+    logger.info("命名: /個人-{帳號}、/部門-{標籤}")
     if args.limit > 0:
         logger.info(f"限制筆數: {args.limit}")
 
@@ -139,8 +123,6 @@ def main() -> int:
         return 1
 
     batch_cfg = {
-        "personal_name": args.personal_name,
-        "department_name": args.department_name,
         "backend": "amazons3",
         "dry_run": dry_run,
         "limit": args.limit,
@@ -200,6 +182,10 @@ def main() -> int:
                 logger.info(
                     f"[dry-run] id={row.get('id')} {row.get('old')} → {row.get('new')}"
                 )
+            elif not row.get("dry_run") and row.get("ok") and args.limit <= 20:
+                logger.info(
+                    f"[OK] id={row.get('id')} {row.get('old')} → {row.get('new')}"
+                )
 
         if proc.stderr.strip():
             logger.error(f"stderr: {proc.stderr.strip()}")
@@ -215,9 +201,15 @@ def main() -> int:
             logger.info(f"  符合更名條件:     {summary.get('eligible', 0)}")
             logger.info(f"  已更名/將更名:    {summary.get('updated', 0)}")
             logger.info(f"  已是目標名稱:     {summary.get('already', 0)}")
-            logger.info(f"  略過（非 minio）: {summary.get('skipped', 0)}")
+            logger.info(f"  略過（無法對應）: {summary.get('skipped', 0)}")
             logger.info(f"  衝突:             {summary.get('conflicts', 0)}")
             logger.info(f"  錯誤:             {summary.get('errors', 0)}")
+            if summary.get("eligible", 0) == 0 and summary.get("updated", 0) == 0:
+                logger.info("")
+                logger.info(
+                    "提示: 若先前已改為「/個人雲端硬碟」「/部門雲端硬碟」，"
+                    "請確認已使用最新版 batch_rename_mount_points.php（支援從 bucket 遷移）。"
+                )
             if error_samples:
                 logger.info("錯誤範例（最多 20 筆）:")
                 for sample in error_samples:
@@ -228,7 +220,7 @@ def main() -> int:
             logger.info("目前為乾跑。確認無誤後加上 --apply 執行。")
         else:
             logger.info("")
-            logger.info("建議登入 1～2 個測試帳號，確認「個人雲端硬碟」「部門雲端硬碟」顯示正確。")
+            logger.info("建議登入測試帳號，確認「個人-*」「部門-*」掛載顯示正確。")
 
         return 0
 

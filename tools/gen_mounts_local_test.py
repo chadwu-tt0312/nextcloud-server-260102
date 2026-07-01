@@ -78,7 +78,7 @@ def main() -> int:
         "--style",
         choices=[MOUNT_POINT_STYLE_DISPLAY, MOUNT_POINT_STYLE_ACCOUNT],
         default=MOUNT_POINT_STYLE_DISPLAY,
-        help="display=/個人雲端硬碟（預設）；account=每人資料夾（名稱取自 bucket）",
+        help="display=/個人-{帳號}、/部門-{標籤}（預設）；account=每人資料夾（名稱取自 bucket）",
     )
     parser.add_argument(
         "-o",

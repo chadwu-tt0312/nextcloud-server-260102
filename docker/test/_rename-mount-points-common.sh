@@ -3,17 +3,18 @@
 # 共用邏輯：先列出外部儲存，再逐筆更新 mount_point
 #
 # 更名規則：
-#   /minio-DEPT_*  → /部門雲端硬碟
-#   /minio-*       → /個人雲端硬碟
+#   /minio-{帳號}             → /個人-{帳號}（每位使用者最多 1 個）
+#   /minio-DEPT_{部門-名稱}     → /部門-{部門_名稱}（每位使用者可 0～n 個）
 #
-# 同一使用者可同時擁有「個人雲端硬碟」與「部門雲端硬碟」各一筆（或各一類掛載）。
-# 僅在「同一使用者 + 相同目標名稱」出現多筆時視為衝突（例如兩個個人掛載都改為 /個人雲端硬碟）。
+# 例：/minio-00059094 → /個人-00059094
+#     /minio-DEPT_SDD-ARC5-ENG1 → /部門-SDD_ARC5_ENG1
 #
 
 set -euo pipefail
 
-MOUNT_POINT_PERSONAL="/個人雲端硬碟"
-MOUNT_POINT_DEPARTMENT="/部門雲端硬碟"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+export PYTHONPATH="${REPO_ROOT}/tools${PYTHONPATH:+:${PYTHONPATH}}"
 
 # 由 docker / k8s 腳本設定後呼叫 rename_mount_points_run
 NC_OCC_CMD=()          # e.g. docker exec ... php occ
@@ -43,8 +44,7 @@ rename_mount_points_usage() {
   --log-dir DIR     記錄目錄（預設 docker/test/logs）
   -h, --help        說明
 
-同一使用者可同時有「個人雲端硬碟」與「部門雲端硬碟」；
-衝突僅發生在同一使用者將有多個相同目標名稱時。
+同一使用者可同時有多個「部門-*」掛載，但「個人-*」最多 1 個。
 EOF
 }
 
@@ -85,55 +85,19 @@ rename_mount_points_build_plan() {
 import json
 import sys
 
+from tools_mount_point import build_mount_rename_plan
+
 export_path, plan_path = sys.argv[1], sys.argv[2]
-PERSONAL = "/個人雲端硬碟"
-DEPT = "/部門雲端硬碟"
-
-def classify(mp: str) -> str | None:
-    m = mp if mp.startswith("/") else f"/{mp}"
-    if m in (PERSONAL, DEPT):
-        return None
-    if m.startswith("/minio-DEPT_"):
-        return DEPT
-    if m.startswith("/minio-"):
-        return PERSONAL
-    return None
-
 with open(export_path, encoding="utf-8") as f:
     mounts = json.load(f)
 
-# 同一使用者可同時有 PERSONAL + DEPT；衝突鍵為 (user, 目標名稱)
-target_counts: dict[tuple[str, str], int] = {}
-planned = []
-
-for m in mounts:
-    mid = m.get("mount_id")
-    old = m.get("mount_point", "")
-    new = classify(old)
-    users = [u for u in (m.get("applicable_users") or []) if u != "admin"]
-    if not users:
-        users = list(m.get("applicable_groups") or [])
-    if not users:
-        users = ["__global__"]
-
-    if new is None:
-        planned.append(("skip", mid, old, "", json.dumps(users, ensure_ascii=False)))
-        continue
-
-    planned.append(("candidate", mid, old, new, json.dumps(users, ensure_ascii=False)))
-    for u in users:
-        key = (u, new)
-        target_counts[key] = target_counts.get(key, 0) + 1
-
-conflict_keys = {k for k, c in target_counts.items() if c > 1}
-
+plan = build_mount_rename_plan(mounts)
 with open(plan_path, "w", encoding="utf-8") as out:
-    for status, mid, old, new, users_json in planned:
-        if status == "candidate":
-            users = json.loads(users_json)
-            conflict = any((u, new) in conflict_keys for u in users)
-            status = "conflict" if conflict else "update"
-        out.write(f"{status}\t{mid}\t{old}\t{new}\t{users_json}\n")
+    for row in plan:
+        out.write(
+            f"{row['status']}\t{row['mount_id']}\t{row['old']}\t{row['new']}\t"
+            f"{json.dumps(row['users'], ensure_ascii=False)}\n"
+        )
 PY
 }
 
@@ -141,7 +105,6 @@ rename_mount_points_step_apply() {
     local export_file="$1"
     local plan_file
     plan_file="$(mktemp)"
-    trap 'rm -f "$plan_file"' RETURN
 
     rename_mount_points_build_plan "$export_file" "$plan_file"
 
@@ -154,7 +117,7 @@ rename_mount_points_step_apply() {
     errors=0
 
     echo "[3/3] 逐筆更新 mount_point..."
-    echo "  （同一使用者可同時擁有「${MOUNT_POINT_PERSONAL}」與「${MOUNT_POINT_DEPARTMENT}」）"
+    echo "  （個人：每使用者最多 1 個；部門：可有多個不同名稱）"
     echo ""
 
   while IFS=$'\t' read -r status mount_id old new users_json; do
@@ -205,6 +168,8 @@ rename_mount_points_step_apply() {
     if ! $APPLY && [[ "$update" -gt 0 ]]; then
         echo "目前為乾跑。確認無誤後加上 --apply 執行。"
     fi
+
+    rm -f "$plan_file"
 }
 
 rename_mount_points_run() {
@@ -217,9 +182,9 @@ rename_mount_points_run() {
     echo "========================================"
     echo ""
     echo "規則:"
-    echo "  /minio-DEPT_* → ${MOUNT_POINT_DEPARTMENT}"
-    echo "  /minio-*      → ${MOUNT_POINT_PERSONAL}"
-    echo "  同一使用者可同時擁有上述兩種掛載"
+    echo "  /minio-{帳號}         → /個人-{帳號}"
+    echo "  /minio-DEPT_{部門名}  → /部門-{部門_名}"
+    echo "  個人：每使用者最多 1 個；部門：0～n 個"
     echo ""
 
     if ! $SKIP_LIST; then

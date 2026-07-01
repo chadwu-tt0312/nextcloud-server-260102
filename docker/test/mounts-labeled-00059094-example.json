@@ -1,0 +1,65 @@
+[
+  {
+    "mount_id": 1,
+    "mount_point": "/個人-00059094",
+    "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+    "authentication_type": "amazons3::accesskey",
+    "configuration": {
+      "bucket": "00059094-filespace",
+      "hostname": "minio1",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "key": "minioadmin",
+      "secret": "minioadminpw"
+    },
+    "options": {
+      "filesystem_check_changes": 1
+    },
+    "applicable_users": ["00059094"],
+    "applicable_groups": []
+  },
+  {
+    "mount_id": 2,
+    "mount_point": "/部門-SDD_ARC5",
+    "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+    "authentication_type": "amazons3::accesskey",
+    "configuration": {
+      "bucket": "dep-sdd-arc5-filespace",
+      "hostname": "minio1",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "key": "minioadmin",
+      "secret": "minioadminpw"
+    },
+    "options": {
+      "filesystem_check_changes": 1
+    },
+    "applicable_users": ["00059094"],
+    "applicable_groups": []
+  },
+  {
+    "mount_id": 3,
+    "mount_point": "/部門-SDD_ARC5_ENG1",
+    "storage": "\\OCA\\Files_External\\Lib\\Storage\\AmazonS3",
+    "authentication_type": "amazons3::accesskey",
+    "configuration": {
+      "bucket": "dep-sdd-arc5-eng1-filespace",
+      "hostname": "minio1",
+      "port": "9000",
+      "region": "us-east-1",
+      "use_ssl": false,
+      "use_path_style": true,
+      "key": "minioadmin",
+      "secret": "minioadminpw"
+    },
+    "options": {
+      "filesystem_check_changes": 1
+    },
+    "applicable_users": ["00059094"],
+    "applicable_groups": []
+  }
+]

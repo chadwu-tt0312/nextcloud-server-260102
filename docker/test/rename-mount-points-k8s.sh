@@ -63,10 +63,14 @@ if [[ "$PHASE" != "Running" ]]; then
 fi
 
 NC_TARGET_LABEL="k8s:${NAMESPACE}/${POD}"
-NC_OCC_CMD=(
-    kubectl exec -n "$NAMESPACE" "$POD" -u www-data --
-    php /var/www/html/occ
-)
+
+# kubectl exec 無 -u；以 su 執行 occ（與 k8s_helm/nextcloud README 一致）
+nc_occ() {
+    local inner
+    inner=$(printf '%q ' php /var/www/html/occ "$@")
+    kubectl exec -n "$NAMESPACE" "$POD" -- su -s /bin/sh www-data -c "$inner"
+}
+
 RENAME_EXPORT_FILE="$EXPORT_FILE_ARG"
 
 rename_mount_points_run

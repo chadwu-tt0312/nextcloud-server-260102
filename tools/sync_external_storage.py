@@ -254,41 +254,34 @@ def import_mount(
     mount_point = mount.get("mount_point", "")
     logger.info(f"  新增掛載 ({mount_point})")
 
-    if dry_run:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False, encoding="utf-8"
-        ) as tmp:
-            json.dump([mount], tmp, ensure_ascii=False)
-            remote_path = f"/tmp/{Path(tmp.name).name}"
-        runtime.copy_file(tmp.name, remote_path)
-        ok = run_occ(
-            runtime,
-            ["files_external:import", "--dry", remote_path],
-            logger,
-            dry_run=False,
-        )
-        runtime.exec_as_user("root", ["rm", "-f", remote_path])
-        Path(tmp.name).unlink(missing_ok=True)
-        return ok
+    def _import_from_remote(remote_path: str, local_path: str) -> bool:
+        try:
+            runtime.copy_file(local_path, remote_path)
+            runtime.fix_file_permissions([remote_path], logger)
+            occ_args = (
+                ["files_external:import", "--dry", remote_path]
+                if dry_run
+                else ["files_external:import", remote_path]
+            )
+            ok = run_occ(runtime, occ_args, logger, dry_run=False)
+            runtime.exec_as_user("root", ["rm", "-f", remote_path])
+            return ok
+        except Exception as e:
+            logger.error(f"  ❌ 匯入失敗: {e}")
+            runtime.exec_as_user("root", ["rm", "-f", remote_path])
+            return False
 
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".json", delete=False, encoding="utf-8"
     ) as tmp:
         json.dump([mount], tmp, ensure_ascii=False)
+        tmp.write("\n")
+        tmp.flush()
         local_path = tmp.name
         remote_path = f"/tmp/{Path(local_path).name}"
 
     try:
-        runtime.copy_file(local_path, remote_path)
-        if not run_occ(
-            runtime,
-            ["files_external:import", remote_path],
-            logger,
-            dry_run=False,
-        ):
-            return False
-        runtime.exec_as_user("root", ["rm", "-f", remote_path])
-        return True
+        return _import_from_remote(remote_path, local_path)
     finally:
         Path(local_path).unlink(missing_ok=True)
 

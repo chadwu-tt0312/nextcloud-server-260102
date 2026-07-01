@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shlex
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -124,6 +125,8 @@ class DockerRuntime(NextcloudRuntime):
 
 
 class K8sRuntime(NextcloudRuntime):
+    OCC_PATH = "/var/www/html/occ"
+
     def __init__(
         self,
         namespace: str = "default",
@@ -201,15 +204,38 @@ class K8sRuntime(NextcloudRuntime):
             check=True,
         )
 
+    def _normalize_command(self, command: list[str]) -> list[str]:
+        if len(command) >= 2 and command[0] == "php" and command[1] == "occ":
+            return ["php", self.OCC_PATH, *command[2:]]
+        return command
+
+    def _kubectl_exec_as_user(
+        self,
+        user: str,
+        command: list[str],
+        *,
+        env: dict[str, str] | None = None,
+    ) -> list[str]:
+        """kubectl exec 不支援 -u；以 su 切換使用者（與官方 Helm chart 用法一致）。"""
+        command = self._normalize_command(command)
+        parts: list[str] = []
+        if env:
+            parts.append("env")
+            for key, value in env.items():
+                parts.append(f"{key}={value}")
+        parts.extend(command)
+        inner = " ".join(shlex.quote(p) for p in parts)
+        return [
+            "kubectl", "exec", "-n", self.namespace, self.pod, "--",
+            "su", "-s", "/bin/sh", user, "-c", inner,
+        ]
+
     def fix_file_permissions(self, remote_paths: list[str], logger: logging.Logger) -> None:
         assert self.pod
-        quoted = " ".join(remote_paths)
+        quoted = " ".join(shlex.quote(p) for p in remote_paths)
         cmd = f"chown {self.run_user}:{self.run_user} {quoted} && chmod 644 {quoted}"
         subprocess.run(
-            [
-                "kubectl", "exec", "-n", self.namespace, self.pod,
-                "-u", "root", "--", "sh", "-c", cmd,
-            ],
+            self._kubectl_exec_as_user("root", ["sh", "-c", cmd]),
             check=True,
             capture_output=True,
             text=True,
@@ -224,13 +250,11 @@ class K8sRuntime(NextcloudRuntime):
         env: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         assert self.pod
-        cmd = ["kubectl", "exec", "-n", self.namespace, self.pod, "-u", user, "--"]
-        if env:
-            cmd.append("env")
-            for key, value in env.items():
-                cmd.append(f"{key}={value}")
-        cmd.extend(command)
-        return subprocess.run(cmd, capture_output=True, text=True)
+        return subprocess.run(
+            self._kubectl_exec_as_user(user, command, env=env),
+            capture_output=True,
+            text=True,
+        )
 
 
 def fetch_all_users_from_occ(
